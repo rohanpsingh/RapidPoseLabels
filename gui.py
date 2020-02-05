@@ -81,13 +81,6 @@ class App:
         self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-    def check_if_loaded(self):
-        if not self.image_loaded:
-            self.msg_box.configure(text = "Image not loaded.")
-            return False
-        else:
-            return True
-
     def add_kp_to_list(self, kp):
         if len(self.scene_kpts_2d)==self.tot_num_keypoints:
             self.msg_box.configure(text = "all keypoints selected")
@@ -111,7 +104,6 @@ class App:
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
-        if not self.check_if_loaded(): return
         self.add_kp_to_list(self.clicked_pixel)
 
     def btn_func_load(self):
@@ -136,15 +128,12 @@ class App:
         self.scene_btn.configure(state=tk.NORMAL)
 
     def btn_func_next(self):
-        if not self.check_if_loaded(): return
         self.add_kp_to_list(self.clicked_pixel)
 
     def btn_func_skip(self):
-        if not self.check_if_loaded(): return
         self.add_kp_to_list([])
 
     def btn_func_reset(self):
-        if not self.check_if_loaded(): return
         self.display_cv_image(self.in_img)
         self.cv_img = self.in_img.copy()
         self.clicked_pixel = []
@@ -153,7 +142,6 @@ class App:
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
         
     def btn_func_scene(self):
-        if not self.check_if_loaded(): return
         while (len(self.scene_kpts_2d) != self.tot_num_keypoints):
             self.add_kp_to_list([])
         self.dataset_scenes.append(self.scene_kpts_2d)
