@@ -4,6 +4,7 @@ import sys
 import yaml
 import argparse
 import gui
+import cv2
 
 if __name__ == '__main__':
 
@@ -16,7 +17,5 @@ if __name__ == '__main__':
     num_keypoints = int(opt.keypoints)
 
     guiobj = gui.App("Label GUI", dataset_path, num_keypoints)
-    kpts_2d = guiobj.dataset_scenes
-    kpts_2d = np.asarray(kpts_2d)
-    print(kpts_2d)
+    res = guiobj.dataset_scenes
     sys.exit(0)

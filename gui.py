@@ -4,15 +4,17 @@ import tkinter as tk
 import PIL.Image, PIL.ImageTk
 import cv2
 import os
+import process
 
 class App:
     def __init__(self, window_title, dataset_path, tot_num_keypoints):
 
         self.dataset_path = dataset_path
         self.tot_num_keypoints = tot_num_keypoints
-        self.dataset_scenes = []
+        self.pose = process.Pose(dataset_path, 1000)
 
-        self.scene_dir_itr = iter(os.listdir(self.dataset_path))
+        list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
+        self.scene_dir_itr = iter(list_of_scene_dirs)
         self.cur_scene_dir = next(self.scene_dir_itr)
         self.clicked_pixel = []
         self.scene_kpts_2d = []
@@ -86,21 +88,21 @@ class App:
             self.msg_box.configure(text = "all keypoints selected")
             return
         if kp==[]: kp = [-1, -1]
-        cv2.circle(self.cv_img, tuple(kp), 5, (0,0,255), -1)
-        self.display_cv_image(self.cv_img)
+        cv2.circle(self.current_rgb_img, tuple(kp), 5, (0,0,255), -1)
+        self.display_cv_image(self.current_rgb_img)
         self.scene_kpts_2d.append(kp)
         self.msg_box.configure(text = "Keypoint added:\n{}".format(kp))
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
         self.clicked_pixel = []
-
+        
     def buttonClick(self, event):
-        tmp = self.cv_img.copy()
+        tmp = self.current_rgb_img.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
 
     def doubleButtonClick(self, event):
-        tmp = self.cv_img.copy()
+        tmp = self.current_rgb_img.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
@@ -109,15 +111,21 @@ class App:
     def btn_func_load(self):
         with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
             img_name_list = file.readlines()
+        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
+            cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
 
-        random_pair = random.choice(img_name_list).split()
+        random_indx = random.randrange(len(img_name_list[:-1]))
+        random_pair = (img_name_list[random_indx]).split()
         dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, random_pair[1])
         rgb_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, random_pair[3])
-        input_image = cv2.imread(rgb_im_path)
-        input_image = cv2.resize(input_image, (self.width, self.height))
-        self.in_img = input_image.copy()
-        self.cv_img = input_image.copy()
-        self.display_cv_image(self.cv_img)
+        self.input_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
+        self.input_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
+
+        self.current_rgb_img = self.input_rgb_image.copy()
+        self.current_img_pos = cam_pose_list[random_indx]
+        self.current_mesh    = os.path.join(self.dataset_path, self.cur_scene_dir, 'scene.ply')
+
+        self.display_cv_image(self.current_rgb_img)
         self.canvas.bind('<Button-1>', self.buttonClick)
         self.canvas.bind('<Double-Button-1>', self.doubleButtonClick)
         self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
@@ -134,8 +142,8 @@ class App:
         self.add_kp_to_list([])
 
     def btn_func_reset(self):
-        self.display_cv_image(self.in_img)
-        self.cv_img = self.in_img.copy()
+        self.display_cv_image(self.input_rgb_image)
+        self.current_rgb_img = self.input_rgb_image.copy()
         self.clicked_pixel = []
         self.scene_kpts_2d = []
         self.msg_box.configure(text = "Scene reset")
@@ -144,12 +152,16 @@ class App:
     def btn_func_scene(self):
         while (len(self.scene_kpts_2d) != self.tot_num_keypoints):
             self.add_kp_to_list([])
-        self.dataset_scenes.append(self.scene_kpts_2d)
+
+        self.pose.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
+        self.pose.scene_cams.append(self.current_img_pos)
+        self.pose.scene_plys.append(self.current_mesh)
+
         self.clicked_pixel = []
         self.scene_kpts_2d = []
         try:
             self.cur_scene_dir = next(self.scene_dir_itr)
-            self.msg_box.configure(text = "moving to scene:\n{}".format(self.cur_scene_dir))
+            self.msg_box.configure(text = "Moving to scene:\n{}".format(self.cur_scene_dir))
             self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
         except:
             self.msg_box.configure(text = "Done all scenes.\nPlease quit")
@@ -166,4 +178,6 @@ class App:
 
     def btn_func_quit(self):
         self.tkroot.destroy()
-
+        self.pose.convert_2Dto3D()
+        self.pose.transform_points()
+        self.pose.visualize()
