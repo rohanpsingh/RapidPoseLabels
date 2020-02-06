@@ -17,5 +17,4 @@ if __name__ == '__main__':
     num_keypoints = int(opt.keypoints)
 
     guiobj = gui.App("Label GUI", dataset_path, num_keypoints)
-    res = guiobj.dataset_scenes
     sys.exit(0)
