@@ -49,16 +49,26 @@ class App:
                                    width=widget_wd, 
                                    state=tk.DISABLED,
                                    command=self.btn_func_scene)
+        self.compute_btn = tk.Button(self.tkroot, text="Compute", 
+                                     width=widget_wd, 
+                                     state=tk.DISABLED,
+                                     command=self.btn_func_compute)
+        self.display_btn = tk.Button(self.tkroot, text="Visualize", 
+                                     width=widget_wd, 
+                                     state=tk.DISABLED,
+                                     command=self.btn_func_display)
         self.quit_btn = tk.Button(self.tkroot, text="Quit", 
                                   width=widget_wd, 
                                   state=tk.NORMAL,
                                   command=self.btn_func_quit)
-        self.load_btn.grid(column=1, row=0, padx=10, pady=10)
+        self.load_btn.grid(column=1, row=0, padx=10)
         self.next_btn.grid(column=1, row=1, padx=10)
         self.skip_btn.grid(column=1, row=2, padx=10)
         self.reset_btn.grid(column=1, row=3, padx=10)
         self.scene_btn.grid(column=1, row=4, padx=10)
-        self.quit_btn.grid(column=1, row=5, padx=10)
+        self.compute_btn.grid(column=1, row=5, padx=10)
+        self.display_btn.grid(column=1, row=6, padx=10)
+        self.quit_btn.grid(column=1, row=7, padx=10)
 
         #message box
         self.msg_box = tk.Label(self.tkroot, 
@@ -69,8 +79,8 @@ class App:
                                 text="Current keypoint list:\n{}".format(self.scene_kpts_2d), 
                                 height = 10, width=widget_wd, 
                                 bg='blue', fg='white')
-        self.msg_box.grid(column=1, row=6, padx=10)
-        self.dat_box.grid(column=1, row=7, rowspan=3, padx=10, pady=10)
+        self.msg_box.grid(column=1, row=8, padx=10)
+        self.dat_box.grid(column=1, row=9, rowspan=3, padx=10, pady=10)
 
         # Create a canvas that can fit the image
         self.canvas = tk.Canvas(self.tkroot, width = self.width, height = self.height)
@@ -152,7 +162,7 @@ class App:
     def btn_func_scene(self):
         while (len(self.scene_kpts_2d) != self.tot_num_keypoints):
             self.add_kp_to_list([])
-
+            
         self.pose.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
         self.pose.scene_cams.append(self.current_img_pos)
         self.pose.scene_plys.append(self.current_mesh)
@@ -175,9 +185,19 @@ class App:
         self.skip_btn.configure(state=tk.DISABLED)
         self.reset_btn.configure(state=tk.DISABLED)
         self.scene_btn.configure(state=tk.DISABLED)
+        self.compute_btn.configure(state=tk.NORMAL)
+
+    def btn_func_compute(self):
+        self.pose.convert_2Dto3D()
+        self.pose.transform_points()
+        res = self.pose.compute()
+        if res:
+            self.display_btn.configure(state=tk.NORMAL)
+
+    def btn_func_display(self):
+        object_kpts = self.pose.object_model
+        self.pose.visualize(object_kpts)
 
     def btn_func_quit(self):
         self.tkroot.destroy()
-        self.pose.convert_2Dto3D()
-        self.pose.transform_points()
-        self.pose.visualize()
+
