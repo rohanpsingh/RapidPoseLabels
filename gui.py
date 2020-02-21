@@ -133,7 +133,7 @@ class App:
 
         self.current_rgb_img = self.input_rgb_image.copy()
         self.current_img_pos = cam_pose_list[random_indx]
-        self.current_mesh    = os.path.join(self.dataset_path, self.cur_scene_dir, 'scene.ply')
+        self.current_mesh    = os.path.join(self.dataset_path, self.cur_scene_dir, self.cur_scene_dir + '.ply')
 
         self.display_cv_image(self.current_rgb_img)
         self.canvas.bind('<Button-1>', self.buttonClick)
@@ -186,17 +186,19 @@ class App:
         self.reset_btn.configure(state=tk.DISABLED)
         self.scene_btn.configure(state=tk.DISABLED)
         self.compute_btn.configure(state=tk.NORMAL)
+        self.display_btn.configure(state=tk.NORMAL)
+        self.pose.convert_2Dto3D()
+        print("Flags: ", self.pose.select_vec[-self.tot_num_keypoints:])
 
     def btn_func_compute(self):
         self.pose.convert_2Dto3D()
         self.pose.transform_points()
         res = self.pose.compute()
-        if res:
-            self.display_btn.configure(state=tk.NORMAL)
 
     def btn_func_display(self):
-        object_kpts = self.pose.object_model
-        self.pose.visualize(object_kpts)
+        self.pose.convert_2Dto3D()
+        self.pose.transform_points()
+        self.pose.visualize_scene(self.current_mesh, self.pose.scene_kpts[-1][np.newaxis,:])
 
     def btn_func_quit(self):
         self.tkroot.destroy()
