@@ -22,6 +22,7 @@ class Pose:
             self.camera_intrinsics = file.readlines()[0].split()
             self.camera_intrinsics = list(map(float, self.camera_intrinsics))
 
+    #2D-to-3D conversion
     def convert_2Dto3D(self):
         self.select_vec = []
         pts_3d = []
@@ -42,6 +43,7 @@ class Pose:
         pts_3d = np.asarray(pts_3d).transpose(0,2,1)
         self.pts_in_3d = pts_3d
 
+    #transform points to first cams in respective scene
     def transform_points(self):
         scene_tf = []
         for scene_pts, pose in zip(self.pts_in_3d, self.scene_cams):
@@ -50,6 +52,7 @@ class Pose:
             scene_tf.append(tf.quaternions.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
         self.scene_kpts = np.asarray(scene_tf)
 
+    #visualization function
     def visualize_object(self, scene_ply_path, scene_obj_kpts):
         vis_mesh_list = []
         scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
@@ -61,33 +64,34 @@ class Pose:
             vis_mesh_list.append(keypt_mesh)
         o3d.visualization.draw_geometries(vis_mesh_list)
 
+    #final computation step
     def compute(self):
+
+        #populate selection matrix from select_vec
+        #TODO: this is ugly
         total_kpt_count  = len(self.select_vec)
         found_kpt_count  = len(np.nonzero(self.select_vec)[0])
         selection_matrix = np.zeros((found_kpt_count*3, total_kpt_count*3))
-
-        print("Total number of keypts: ", total_kpt_count)
-        print("Keypts localized in 3D: ", found_kpt_count)
-        print("Size of selection matrix: ", selection_matrix.shape)
-
-        #generate selection matrix from select_vec
         row = 0
         for idx, flag in enumerate(self.select_vec):
             if flag:
                 selection_matrix[row:row+3, (idx*3):(idx*3)+3] = np.eye(3)
                 row+=3
 
+        #just FYI
+        print("Total number of keypts: ", total_kpt_count)
+        print("Keypts localized in 3D: ", found_kpt_count)
+        print("Size of selection matrix: ", selection_matrix.shape)
+
+        #save manual annotations and selection matrix
         np.savez("saved_gui_output", kpts=self.scene_kpts, sm=selection_matrix)
-        if False:
-            f = np.load("saved_gui_output.npz")
-            self.scene_kpts = f['kpts']
-            selection_matrix = f['sm']
 
         #initialize quaternions and translations for each scene
         scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
         scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
         scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
 
+        #main optimization step
         res = optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
         #output from optimization
@@ -96,13 +100,13 @@ class Pose:
         len_Ps = scene_P_ini.size
         output_vec = res.x
         if res.success:
-            print("--------\n--------\n--------")
             out_ts = output_vec[:len_ts].reshape(scene_t_ini[1:, :].shape)
             out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q_ini[1:, :].shape)
             out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
             object_model = out_Ps.transpose()
-            print("SUCCESS")
             np.set_printoptions(precision=5, suppress=True)
+            print("--------\n--------\n--------")
+            print("SUCCESS")
             print("Output translations:\n", out_ts)
             print("Output quaternions:\n", out_qs)
             print("Object Model:\n", object_model, object_model.shape)

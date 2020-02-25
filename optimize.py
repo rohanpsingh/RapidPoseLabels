@@ -25,13 +25,13 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
 
     #error function
     def error_func(x):
-        ts = x[ : len_ts].reshape(scene_t[1:, :].shape)
-        qs = x[len_ts : len_ts+len_qs].reshape(scene_q[1:, :].shape)
+        ts = np.concatenate((np.array([[0,0,0]]), x[ : len_ts].reshape(scene_t[1:, :].shape)))
+        qs = np.concatenate((np.array([[1,0,0,0]]), x[len_ts : len_ts+len_qs].reshape(scene_q[1:, :].shape)))
         Ps = x[len_ts+len_qs : ].reshape(scene_P.shape)
-        list_pts = Ps.flatten()
+        list_pts = []
         for (q, t, pts) in zip(qs, ts, Ps[np.newaxis,:].repeat(qs.shape[0], axis=0)):
-            for pt in pts:
-                list_pts = np.append(list_pts, (rotate(q, pt) + t))
+            l = [(rotate(q, pt) + t) for pt in pts]
+            list_pts = np.append(list_pts, l)
         err = np.linalg.norm(select_mat.dot(list_pts) - select_mat.dot(ref_kpts_vec))**2
         return err
 
@@ -43,7 +43,6 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
     ini_vals = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten(), scene_P.flatten()))
 
     #perform optimization and save output vector
-    #res = scipy.optimize.minimize(error_func, ini_vals, method='BFGS', options={'disp':True})
     res = scipy.optimize.minimize(error_func, ini_vals, constraints=cons, method='SLSQP', tol=1e-9, options={'disp':True,'ftol':1e-8, 'maxiter':1000})
     np.savez("saved_opt_output", res=res.x)
 
