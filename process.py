@@ -49,31 +49,6 @@ class Pose:
             pose_q = np.asarray([pose[-1]] + pose[3:-1])
             scene_tf.append(tf.quaternions.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
         self.scene_kpts = np.asarray(scene_tf)
-        #np.set_printoptions(threshold=sys.maxsize, linewidth=200)
-        #np.set_printoptions(precision=4, suppress=True)
-
-    def visualize(self, input_kpts):
-        for ply_path, keypts in zip(self.scene_plys, input_kpts):
-            vis_mesh_list = []
-            scene_cloud = o3d.io.read_point_cloud(ply_path)
-            vis_mesh_list.append(scene_cloud)
-            for keypt in keypts.transpose():
-                keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
-                keypt_mesh.translate(keypt)
-                keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
-                vis_mesh_list.append(keypt_mesh)
-            o3d.visualization.draw_geometries(vis_mesh_list)
-
-    def visualize_scene(self, scene_ply_path, scene_obj_kpts):
-        vis_mesh_list = []
-        scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
-        vis_mesh_list.append(scene_cloud)
-        for keypt in scene_obj_kpts.transpose():
-            keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
-            keypt_mesh.translate(keypt)
-            keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
-            vis_mesh_list.append(keypt_mesh)
-        o3d.visualization.draw_geometries(vis_mesh_list)
 
     def visualize_object(self, scene_ply_path, scene_obj_kpts):
         vis_mesh_list = []
@@ -109,21 +84,30 @@ class Pose:
             selection_matrix = f['sm']
 
         #initialize quaternions and translations for each scene
-        scene_t = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
-        scene_q = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
-        scene_P = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
+        scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
+        scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
+        scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
 
-        res = optimize.predict(self.scene_kpts, scene_t, scene_q, scene_P, selection_matrix)
+        res = optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
-        #output after optimization
-        len_ts = scene_t.size
-        len_qs = scene_q.size
-        len_Ps = scene_P.size
+        #output from optimization
+        len_ts = scene_t_ini[1:].size
+        len_qs = scene_q_ini[1:].size
+        len_Ps = scene_P_ini.size
         output_vec = res.x
-        out_ts = output_vec[:(len_ts-3)].reshape(scene_t[1:, :].shape)
-        out_qs = output_vec[(len_ts-3):(len_ts + len_qs -7)].reshape(scene_q[1:, :].shape)
-        out_Ps = output_vec[(len_ts + len_qs-7):].reshape(scene_P.shape)
-        object_model = out_Ps.transpose()
+        if res.success:
+            print("--------\n--------\n--------")
+            out_ts = output_vec[:len_ts].reshape(scene_t_ini[1:, :].shape)
+            out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q_ini[1:, :].shape)
+            out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
+            object_model = out_Ps.transpose()
+            print("SUCCESS")
+            np.set_printoptions(precision=5, suppress=True)
+            print("Output translations:\n", out_ts)
+            print("Output quaternions:\n", out_qs)
+            print("Object Model:\n", object_model, object_model.shape)
+            print("--------\n--------\n--------")
 
+        #visualize the generated object model in first scene
         self.visualize_object(self.scene_plys[0], object_model)
         return res.success
