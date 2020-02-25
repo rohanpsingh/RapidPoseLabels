@@ -59,6 +59,16 @@ class Pose:
         vis_mesh_list.append(scene_cloud)
         for keypt in scene_obj_kpts.transpose():
             keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
+            keypt_mesh.translate(keypt)
+            keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
+            vis_mesh_list.append(keypt_mesh)
+        o3d.visualization.draw_geometries(vis_mesh_list)
+    def visualize_object(self, scene_ply_path, scene_obj_kpts):
+        vis_mesh_list = []
+        scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
+        vis_mesh_list.append(scene_cloud)
+        for keypt in scene_obj_kpts.transpose():
+            keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
             keypt_mesh.translate(keypt[0])
             keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
             vis_mesh_list.append(keypt_mesh)
@@ -84,7 +94,7 @@ class Pose:
         print("Size of selection matrix: ", selection_matrix.shape)
 
         #save manual annotations and selection matrix
-        np.savez("saved_gui_output", kpts=self.scene_kpts, sm=selection_matrix)
+        #np.savez("saved_gui_output", kpts=self.scene_kpts, sm=selection_matrix)
 
         #initialize quaternions and translations for each scene
         scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
@@ -115,3 +125,4 @@ class Pose:
         #visualize the generated object model in first scene
         self.visualize_object(self.scene_plys[0], object_model)
         return res.success
+

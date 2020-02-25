@@ -44,6 +44,6 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
 
     #perform optimization and save output vector
     res = scipy.optimize.minimize(error_func, ini_vals, constraints=cons, method='SLSQP', tol=1e-9, options={'disp':True,'ftol':1e-8, 'maxiter':1000})
-    np.savez("saved_opt_output", res=res.x)
+    np.savez("saved_opt_output", res=res.x, ref=ref_kpts, sm=select_mat)
 
     return res
