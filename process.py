@@ -102,9 +102,9 @@ class Pose:
                 selection_matrix[row:row+3, (idx*3):(idx*3)+3] = np.eye(3)
                 row+=3
 
-        #np.savez("saved_scenes", kpts=self.scene_kpts, sm=selection_matrix)
-        if True:
-            f = np.load("saved_scenes.npz")
+        np.savez("saved_gui_output", kpts=self.scene_kpts, sm=selection_matrix)
+        if False:
+            f = np.load("saved_gui_output.npz")
             self.scene_kpts = f['kpts']
             selection_matrix = f['sm']
 

@@ -44,12 +44,11 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
     init_vals = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten(), scene_P.flatten()))
     #res = scipy.optimize.minimize(error_func, init_vals, method='BFGS', options={'disp':True})
     res = scipy.optimize.minimize(error_func, init_vals, constraints=cons, method='SLSQP', tol=1e-9, options={'disp':True,'ftol':1e-8, 'maxiter':1000})
-    #res = scipy.optimize.minimize(error_func, init_vals, constraints=cons, method='trust-constr', tol=1e-8, options={'disp':True, 'maxiter':400})
 
+    output_vec = res.x
+    np.savez("saved_opt_output", res=output_vec)
     if res.success:
         print("--------\n--------\n--------")
-        output_vec = res.x
-        np.savez("saved_tmp_output", res=output_vec)
         out_ts = output_vec[:len_ts].reshape(scene_t[1:, :].shape)
         out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q[1:, :].shape)
         out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P.shape)
