@@ -102,7 +102,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", required=True)
     ap.add_argument("--input", required=True)
-    ap.add_argument("--visualize", required=False, default=True)
+    ap.add_argument("--visualize", required=True, default=True)
     opt = ap.parse_args()
 
     lab = Annotations(opt.dataset, opt.input, opt.visualize)

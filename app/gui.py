@@ -4,14 +4,14 @@ import tkinter as tk
 import PIL.Image, PIL.ImageTk
 import cv2
 import os
-import process
+from app.process import Process
 
-class App:
+class GUI:
     def __init__(self, window_title, dataset_path, tot_num_keypoints):
 
         self.dataset_path = dataset_path
         self.tot_num_keypoints = tot_num_keypoints
-        self.pose = process.Pose(dataset_path, 1000)
+        self.pose = Process(dataset_path, 1000)
 
         list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
         self.scene_dir_itr = iter(list_of_scene_dirs)

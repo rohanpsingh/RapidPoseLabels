@@ -3,7 +3,7 @@ import os
 import sys
 import yaml
 import argparse
-import gui
+import app.gui
 import cv2
 
 if __name__ == '__main__':
@@ -16,5 +16,5 @@ if __name__ == '__main__':
     dataset_path = opt.dataset
     num_keypoints = int(opt.keypoints)
 
-    guiobj = gui.App("Label GUI", dataset_path, num_keypoints)
+    guiobj = app.gui.GUI("Label GUI", dataset_path, num_keypoints)
     sys.exit(0)

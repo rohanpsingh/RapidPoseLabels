@@ -5,10 +5,10 @@ import os
 import sys
 import open3d as o3d
 import scipy.optimize
-import optimize
+import app.optimize
 
 
-class Pose:
+class Process:
     def __init__(self, dataset_path, scale):
         self.scene_imgs = []
         self.scene_cams = []
@@ -53,7 +53,7 @@ class Pose:
         self.scene_kpts = np.asarray(scene_tf)
 
     #visualization function
-    def visualize_object(self, scene_ply_path, scene_obj_kpts):
+    def visualize_scene(self, scene_ply_path, scene_obj_kpts):
         vis_mesh_list = []
         scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
         vis_mesh_list.append(scene_cloud)
@@ -102,7 +102,7 @@ class Pose:
         scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
 
         #main optimization step
-        res = optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
+        res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
         #output from optimization
         len_ts = scene_t_ini[1:].size
