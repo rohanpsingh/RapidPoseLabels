@@ -4,8 +4,7 @@ import cv2
 import numpy as np
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
-import open3d as o3d
-from optimize import *
+from itertools import combinations
 
 class Annotations:
     def __init__(self, dataset_path, input_arr_path, visualize):
@@ -26,19 +25,34 @@ class Annotations:
         self.list_of_scene_dirs = [d for d in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, d))]
         self.width = 640
         self.height = 480
+        self.bbox_scale = 1.5
 
     def project3Dto2D(self, scene_tf, cam_tf, img):
         tf = np.dot(np.linalg.inv(cam_tf), scene_tf)
         rvec,_ = cv2.Rodrigues(tf[:3, :3])
         tvec = tf[:3,3]
         imgpts,_ = cv2.projectPoints(self.object_model, rvec, tvec, self.cam_mat, None)
-        imgpts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
-        for p in range(imgpts.shape[0]):
-            cv2.circle(img, tuple((int(imgpts[p,0]), int(imgpts[p,1]))), 3, (0,0,255), -1)
+        keypts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
+
+        def square_distance(x,y): return sum([(xi-yi)**2 for xi, yi in zip(x,y)])
+        max_square_distance = 0
+        for pair in combinations(keypts,2):
+            if square_distance(*pair) > max_square_distance:
+                max_square_distance = square_distance(*pair)
+                max_pair = pair
+        bbox_cn = keypts.mean(0)
+        bbox_sd = (max_square_distance**0.5)*self.bbox_scale
+        bbox_tl = keypts.mean(0)-(bbox_sd/2)
+        bbox_br = keypts.mean(0)+(bbox_sd/2)
+        bbox = (bbox_cn, bbox_sd/200.0)
+
+        for p in range(keypts.shape[0]):
+            cv2.circle(img, tuple((int(keypts[p,0]), int(keypts[p,1]))), 3, (0,0,255), -1)
+        cv2.rectangle(img, (int(bbox_tl[0]), int(bbox_tl[1])), (int(bbox_br[0]), int(bbox_br[1])), (0,255,0), 2)
         if self.visualize:
             cv2.imshow('win', img)
             cv2.waitKey(10)
-        return img
+        return keypts, bbox
         
     def process_input(self, dbg=False):
         ref_keypts = self.input_array['ref']
@@ -60,7 +74,6 @@ class Annotations:
         out_Ts = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
         self.object_model = out_Ps
         self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_Ts))
-
         if dbg:
             np.set_printoptions(precision=5, suppress=True)
             print("--------\n--------\n--------")
