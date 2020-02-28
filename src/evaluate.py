@@ -3,22 +3,33 @@ import argparse
 import open3d as o3d
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
+import sys
+from skimage.util.shape import view_as_blocks
 
-def visualize_keypoints(X, Y, T):
+np.set_printoptions(threshold=sys.maxsize, linewidth=700)
+np.set_printoptions(precision=4, suppress=True)
+
+def visualize_keypoints(X, Y, T, model_off_path):
     vis_mesh_list = []
     vis_mesh_list.append(o3d.geometry.TriangleMesh.create_coordinate_frame(0.2))
+
+    if model_off_path is not None:
+        obj_mesh = o3d.io.read_triangle_mesh(model_off_path)
+        obj_mesh.paint_uniform_color([0.6, 0.6, 0.1])
+        obj_cloud = obj_mesh.sample_points_uniformly(5000)
+        vis_mesh_list.append(obj_cloud)
 
     for pt in X:
         keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.006)
         pt = np.dot(T[:3,:3], pt) + T[:3,3]
         keypt_mesh.translate(pt)
-        keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
+        keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7]) #blue
         vis_mesh_list.append(keypt_mesh)
 
     for pt in Y:
         keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.005)
         keypt_mesh.translate(pt)
-        keypt_mesh.paint_uniform_color([0.7, 0.1, 0.1])
+        keypt_mesh.paint_uniform_color([0.7, 0.1, 0.1]) #red
         vis_mesh_list.append(keypt_mesh)
 
     o3d.visualization.draw_geometries(vis_mesh_list)
@@ -55,15 +66,34 @@ def procrustes(X, Y):
     tform = {'rotation':T, 'scale':b, 'translation':c}
     return d, Z, tform
 
-def get_object_definition(pp_file):
+def get_visibility(select):
+    vec = []
+    row, col = 0, 0
+    while col<(select.shape[1]):
+        m = select[row:row+3, col:col+3]
+        if (m == np.eye(3)).all():
+            vec.append(1)
+            row+=3
+        else:
+            vec.append(0)
+        col+=3
+    return vec
+
+def get_object_definition(pp_file, vec):
     with open(pp_file, 'r') as file:
         lines = [[float(i.rsplit('=')[1].rsplit('"')[1]) for i in line.split()[1:4]] for line in file.readlines()[8:-1]]
-    return np.asarray(lines)
+    out = [kpt for v, kpt in zip(vec, lines) if v]
+    return np.asarray(out)
         
+def get_object_manual(kpts, vec):
+    out = [kpt for v, kpt in zip(vec, kpts.transpose()) if v]
+    return np.asarray(out)
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("--points", required=True)
     ap.add_argument("--input", required=True)
+    ap.add_argument("--off", required=True)
     ap.add_argument("--visualize", required=True, default=True)
     opt = ap.parse_args()
 
@@ -77,19 +107,23 @@ if __name__ == '__main__':
     num_scenes = ref_keypts.shape[0]
     num_keypts = ref_keypts.shape[2]
     print("Number of scenes: ", num_scenes)
+    print("Number of keypts: ", num_keypts)
 
-    obj_def = get_object_definition(opt.points)
-    obj_est = opt_output[(num_scenes-1)*7:].reshape((num_keypts, 3))
-    d, Z, tform = procrustes(obj_def, obj_est)
+    vis_vec = get_visibility(select_mat[:3*num_keypts,:3*num_keypts])
+    obj_man = get_object_manual(ref_keypts[0], vis_vec)
+    obj_def = get_object_definition(opt.points, vis_vec)
+    d, Z, tform = procrustes(obj_def, obj_man)
 
     T = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
     
+    obj_all = get_object_definition(opt.points, np.ones(num_keypts))
+    obj_est = opt_output[(num_scenes-1)*7:].reshape((num_keypts, 3))
     err = []
-    for (x, y) in zip(obj_def, obj_est):
+    for (x, y) in zip(obj_all, obj_est):
         y = (T[:3,:3].dot(y) + T[:3,3])
         err.append(((x-y)**2).sum()**0.5)
- 
+
     print("Mean error: ", sum(err)/len(err))
     print("---")
     if visualize:
-        visualize_keypoints(obj_est, obj_def, T)
+        visualize_keypoints(obj_est, obj_all, T, opt.off)
