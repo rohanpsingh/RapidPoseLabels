@@ -109,11 +109,11 @@ class Process:
         len_qs = scene_q_ini[1:].size
         len_Ps = scene_P_ini.size
         output_vec = res.x
+        out_ts = output_vec[:len_ts].reshape(scene_t_ini[1:, :].shape)
+        out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q_ini[1:, :].shape)
+        out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
+        object_model = out_Ps.transpose()
         if res.success:
-            out_ts = output_vec[:len_ts].reshape(scene_t_ini[1:, :].shape)
-            out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q_ini[1:, :].shape)
-            out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
-            object_model = out_Ps.transpose()
             np.set_printoptions(precision=5, suppress=True)
             print("--------\n--------\n--------")
             print("SUCCESS")

@@ -22,7 +22,13 @@ class Annotations:
         self.cam_mat[0,2] = camera_intrinsics[2]
         self.cam_mat[1,2] = camera_intrinsics[3]
 
+        self.num_scenes = self.input_array['ref'].shape[0]
+        self.num_keypts = self.input_array['ref'].shape[2]
         self.list_of_scene_dirs = [d for d in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, d))]
+        self.list_of_scene_dirs.sort()
+        self.list_of_scene_dirs = self.list_of_scene_dirs[:self.num_scenes]
+        print("List of scenes: ", self.list_of_scene_dirs)
+        print("Number of scenes: ", self.num_scenes)
         self.width = 640
         self.height = 480
         self.bbox_scale = 1.5
@@ -59,11 +65,9 @@ class Annotations:
         select_mat = self.input_array['sm']
         opt_output = self.input_array['res']
 
-        num_scenes = ref_keypts.shape[0]
-        num_keypts = ref_keypts.shape[2]
-        scene_t_ini = np.array([[0, 0, 0]]).repeat(num_scenes, axis=0)
-        scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(num_scenes, axis=0)
-        scene_P_ini = np.array([[0, 0, 0]]).repeat(num_keypts, axis=0)
+        scene_t_ini = np.array([[0, 0, 0]]).repeat(self.num_scenes, axis=0)
+        scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.num_scenes, axis=0)
+        scene_P_ini = np.array([[0, 0, 0]]).repeat(self.num_keypts, axis=0)
 
         len_ts = scene_t_ini[1:].size
         len_qs = scene_q_ini[1:].size
@@ -86,11 +90,12 @@ class Annotations:
 
     def generate_labels(self):
         for cur_scene_dir, sce_T in zip(self.list_of_scene_dirs, self.scene_tfs):
+            print(cur_scene_dir)
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'associations.txt'), 'r') as file:
                 img_name_list = file.readlines()
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'camera.poses'), 'r') as file:
                 cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
-            for img_name, cam_pose in zip(img_name_list, cam_pose_list):
+            for img_name, cam_pose in zip(img_name_list[:100], cam_pose_list[:100]):
                 img_name = img_name.split()
                 rgb_im_path = os.path.join(self.dataset_path, cur_scene_dir, img_name[3])
                 input_rgb_image = cv2.resize(cv2.imread(rgb_im_path), (self.width, self.height))

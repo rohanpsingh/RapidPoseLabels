@@ -76,6 +76,7 @@ if __name__ == '__main__':
 
     num_scenes = ref_keypts.shape[0]
     num_keypts = ref_keypts.shape[2]
+    print("Number of scenes: ", num_scenes)
 
     obj_def = get_object_definition(opt.points)
     obj_est = opt_output[(num_scenes-1)*7:].reshape((num_keypts, 3))

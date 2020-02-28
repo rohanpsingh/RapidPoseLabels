@@ -7,15 +7,21 @@ import os
 from app.process import Process
 
 class GUI:
-    def __init__(self, window_title, dataset_path, tot_num_keypoints):
+    def __init__(self, window_title, dataset_path, tot_num_keypoints, tot_num_scenes):
 
         self.dataset_path = dataset_path
         self.tot_num_keypoints = tot_num_keypoints
+        self.tot_num_scenes = tot_num_scenes
         self.pose = Process(dataset_path, 1000)
 
         list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
+        list_of_scene_dirs.sort()
+        list_of_scene_dirs = list_of_scene_dirs[:tot_num_scenes]
+        print("Number of scenes: ", tot_num_scenes)
+        print("List of scenes: ", list_of_scene_dirs)
         self.scene_dir_itr = iter(list_of_scene_dirs)
         self.cur_scene_dir = next(self.scene_dir_itr)
+        print(self.cur_scene_dir)
         self.clicked_pixel = []
         self.scene_kpts_2d = []
         self.image_loaded=False
