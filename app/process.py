@@ -89,9 +89,9 @@ class Process:
                 row+=3
 
         #just FYI
-        print("Total number of keypts: ", total_kpt_count)
-        print("Keypts localized in 3D: ", found_kpt_count)
-        print("Size of selection matrix: ", selection_matrix.shape)
+        #print("Total number of keypts: ", total_kpt_count)
+        #print("Keypts localized in 3D: ", found_kpt_count)
+        #print("Size of selection matrix: ", selection_matrix.shape)
 
         #save manual annotations and selection matrix
         #np.savez("saved_gui_output", kpts=self.scene_kpts, sm=selection_matrix)
@@ -114,12 +114,13 @@ class Process:
         out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
         object_model = out_Ps.transpose()
         if res.success:
+            np.set_printoptions(threshold=sys.maxsize, linewidth=700)
             np.set_printoptions(precision=5, suppress=True)
             print("--------\n--------\n--------")
             print("SUCCESS")
-            print("Output translations:\n", out_ts)
-            print("Output quaternions:\n", out_qs)
-            print("Object Model:\n", object_model, object_model.shape)
+            #print("Output translations:\n", out_ts)
+            #print("Output quaternions:\n", out_qs)
+            #print("Object Model:\n", object_model, object_model.shape)
             print("--------\n--------\n--------")
 
         #visualize the generated object model in first scene

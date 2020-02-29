@@ -21,7 +21,7 @@ class GUI:
         print("List of scenes: ", list_of_scene_dirs)
         self.scene_dir_itr = iter(list_of_scene_dirs)
         self.cur_scene_dir = next(self.scene_dir_itr)
-        print(self.cur_scene_dir)
+
         self.clicked_pixel = []
         self.scene_kpts_2d = []
         self.image_loaded=False

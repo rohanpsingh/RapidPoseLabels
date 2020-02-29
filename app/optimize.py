@@ -2,6 +2,7 @@ import numpy as np
 import scipy.optimize
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
+import glob
 
 def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
 
@@ -42,8 +43,12 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
     #generate initial vector
     ini_vals = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten(), scene_P.flatten()))
 
-    #perform optimization and save output vector
-    res = scipy.optimize.minimize(error_func, ini_vals, constraints=cons, method='SLSQP', tol=1e-9, options={'disp':True,'ftol':1e-8, 'maxiter':1000})
-    np.savez("saved_opt_output", res=res.x, ref=ref_kpts, sm=select_mat)
+    #perform optimization
+    res = scipy.optimize.minimize(error_func, ini_vals, constraints=cons, method='SLSQP', tol=1e-9, options={'disp':True,'ftol':1e-9, 'maxiter':1000})
+
+    # and save the output
+    count = len(glob.glob('saved_opt_output*.npz'))
+    out_fn = 'saved_opt_output_' + str(count)
+    np.savez(out_fn, res=res.x, ref=ref_kpts, sm=select_mat)
 
     return res
