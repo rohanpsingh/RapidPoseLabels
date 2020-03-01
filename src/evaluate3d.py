@@ -34,7 +34,7 @@ def visualize_keypoints(X, Y, T, model_off_path):
 
     o3d.visualization.draw_geometries(vis_mesh_list)
 
-def procrustes(X, Y):
+def procrustes(X, Y, scaling=True, reflection='best'):
     n,m = X.shape
     ny,my = Y.shape
     muX = X.mean(0)
@@ -56,10 +56,21 @@ def procrustes(X, Y):
     V = Vt.T
     T = np.dot(V, U.T)
 
+    if reflection is not 'best':
+        have_reflection = np.linalg.det(T) < 0
+        if reflection != have_reflection:
+            V[:,-1] *= -1
+            s[-1] *= -1
+            T = np.dot(V, U.T)
     traceTA = s.sum()
-    b = 1
-    d = 1 + ssY/ssX - 2 * traceTA * normY / normX
-    Z = normY*np.dot(Y0, T) + muX
+    if scaling:
+        b = traceTA * normX / normY
+        d = 1 - traceTA**2
+        Z = normX*traceTA*np.dot(Y0, T) + muX
+    else:
+        b = 1
+        d = 1 + ssY/ssX - 2 * traceTA * normY / normX
+        Z = normY*np.dot(Y0, T) + muX
     if my < m:
         T = T[:my,:]
     c = muX - b*np.dot(muY, T)
@@ -71,11 +82,11 @@ def get_visibility(select):
     row, col = 0, 0
     while col<(select.shape[1]):
         m = select[row:row+3, col:col+3]
-        if (m == np.eye(3)).all():
+        if (m.shape[0]==0) or not (m == np.eye(3)).all():
+            vec.append(0)
+        else:
             vec.append(1)
             row+=3
-        else:
-            vec.append(0)
         col+=3
     return vec
 
@@ -109,10 +120,11 @@ if __name__ == '__main__':
     print("Number of scenes: ", num_scenes)
     print("Number of keypts: ", num_keypts)
 
+    sce_id = 0
     vis_vec = get_visibility(select_mat[:3*num_keypts,:3*num_keypts])
-    obj_man = get_object_manual(ref_keypts[0], vis_vec)
+    obj_man = get_object_manual(ref_keypts[sce_id], vis_vec)
     obj_def = get_object_definition(opt.points, vis_vec)
-    d, Z, tform = procrustes(obj_def, obj_man)
+    d, Z, tform = procrustes(obj_def, obj_man, False)
 
     T = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
     
