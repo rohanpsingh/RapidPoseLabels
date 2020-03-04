@@ -107,7 +107,7 @@ class Evaluate:
                 img_name_list = file.readlines()
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'camera.poses'), 'r') as file:
                 cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
-            for img_name, cam_pose in zip(img_name_list[:100], cam_pose_list):
+            for img_name, cam_pose in zip(img_name_list, cam_pose_list):
                 img_name = img_name.split()
                 rgb_im_path = os.path.join(self.dataset_path, cur_scene_dir, img_name[3])
                 input_rgb_image = cv2.resize(cv2.imread(rgb_im_path), (self.width, self.height))
