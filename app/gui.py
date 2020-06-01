@@ -7,27 +7,29 @@ import os
 from app.process import Process
 
 class GUI:
-    def __init__(self, window_title, dataset_path, tot_num_keypoints, tot_num_scenes):
-
+    def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000):
+        # get input arguments
         self.dataset_path = dataset_path
-        self.tot_num_keypoints = tot_num_keypoints
-        self.tot_num_scenes = tot_num_scenes
-        self.pose = Process(dataset_path, 1000)
+        self.output_dir = output_dir
+        self.num_keypoints = num_keypoints
 
         list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
         list_of_scene_dirs.sort()
-        list_of_scene_dirs = list_of_scene_dirs[:tot_num_scenes]
-        print("Number of scenes: ", tot_num_scenes)
+        print("Number of scenes: ", len(list_of_scene_dirs))
         print("List of scenes: ", list_of_scene_dirs)
         self.scene_dir_itr = iter(list_of_scene_dirs)
         self.cur_scene_dir = next(self.scene_dir_itr)
 
+        self.process = Process(dataset_path, output_dir, scale)
         self.clicked_pixel = []
         self.scene_kpts_2d = []
         self.image_loaded=False
 
+        # assumes images are 640x480
         self.width = 640
         self.height = 480
+
+        # set up gui object
         self.tkroot = tk.Tk()
         self.tkroot.title(window_title)
         self.tkroot.geometry('900x500')
@@ -76,7 +78,7 @@ class GUI:
         self.display_btn.grid(column=1, row=6, padx=10)
         self.quit_btn.grid(column=1, row=7, padx=10)
 
-        #message box
+        # message box
         self.msg_box = tk.Label(self.tkroot, 
                                 text="Please load an image",
                                 height = 5, width=widget_wd, 
@@ -100,7 +102,7 @@ class GUI:
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
     def add_kp_to_list(self, kp):
-        if len(self.scene_kpts_2d)==self.tot_num_keypoints:
+        if len(self.scene_kpts_2d)==self.num_keypoints:
             self.msg_box.configure(text = "all keypoints selected")
             return
         if kp==[]: kp = [-1, -1]
@@ -166,12 +168,12 @@ class GUI:
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
         
     def btn_func_scene(self):
-        while (len(self.scene_kpts_2d) != self.tot_num_keypoints):
+        while (len(self.scene_kpts_2d) != self.num_keypoints):
             self.add_kp_to_list([])
             
-        self.pose.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
-        self.pose.scene_cams.append(self.current_img_pos)
-        self.pose.scene_plys.append(self.current_mesh)
+        self.process.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
+        self.process.scene_cams.append(self.current_img_pos)
+        self.process.scene_plys.append(self.current_mesh)
 
         self.clicked_pixel = []
         self.scene_kpts_2d = []
@@ -193,18 +195,18 @@ class GUI:
         self.scene_btn.configure(state=tk.DISABLED)
         self.compute_btn.configure(state=tk.NORMAL)
         self.display_btn.configure(state=tk.NORMAL)
-        self.pose.convert_2Dto3D()
-        print("Flags: ", self.pose.select_vec[-self.tot_num_keypoints:])
+        self.process.convert_2Dto3D()
+        print("Flags: ", self.process.select_vec[-self.num_keypoints:])
 
     def btn_func_compute(self):
-        self.pose.convert_2Dto3D()
-        self.pose.transform_points()
-        res = self.pose.compute()
+        self.process.convert_2Dto3D()
+        self.process.transform_points()
+        res = self.process.compute()
 
     def btn_func_display(self):
-        self.pose.convert_2Dto3D()
-        self.pose.transform_points()
-        self.pose.visualize_scene(self.current_mesh, self.pose.scene_kpts[-1][np.newaxis,:])
+        self.process.convert_2Dto3D()
+        self.process.transform_points()
+        self.process.visualize_scene(self.current_mesh, self.process.scene_kpts[-1][np.newaxis,:])
 
     def btn_func_quit(self):
         self.tkroot.destroy()

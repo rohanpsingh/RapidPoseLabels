@@ -1,22 +1,18 @@
-import numpy as np
-import os
 import sys
-import yaml
 import argparse
 import app.gui
-import cv2
 
 if __name__ == '__main__':
 
+    # get command line arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", required=True)
-    ap.add_argument("--keypoints", required=True)
-    ap.add_argument("--scenes", required=True)
+    ap.add_argument("--dataset", required=True, type=str, help='path to root dir of raw dataset')
+    ap.add_argument("--output", required=True, type=str, help='path to output dir')
+    ap.add_argument("--keypoints", required=True, type=int, help='number of keypoints to be defined')
     opt = ap.parse_args()
 
-    dataset_path = opt.dataset
-    num_keypoints = int(opt.keypoints)
-    num_scenes = int(opt.scenes)
+    # run the GUI on input arguments
+    guiobj = app.gui.GUI("Label GUI", opt.dataset, opt.output, opt.keypoints)
 
-    guiobj = app.gui.GUI("Label GUI", dataset_path, num_keypoints, num_scenes)
+    # exit
     sys.exit(0)

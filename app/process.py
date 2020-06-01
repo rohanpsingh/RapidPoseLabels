@@ -6,16 +6,21 @@ import sys
 import open3d as o3d
 import scipy.optimize
 import app.optimize
-
+import glob
 
 class Process:
-    def __init__(self, dataset_path, scale):
+    def __init__(self, dataset_path, output_dir, scale):
         self.scene_imgs = []
         self.scene_cams = []
         self.scene_plys = []
         self.scene_kpts = []
         self.pts_in_3d  = []
         self.scale = scale
+        self.output_dir = output_dir
+
+        # create output dir if not exists
+        if not os.path.isdir(self.output_dir):
+            os.makedirs(self.output_dir)
 
         self.camera_intrinsics = []
         with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
@@ -93,9 +98,6 @@ class Process:
         #print("Keypts localized in 3D: ", found_kpt_count)
         #print("Size of selection matrix: ", selection_matrix.shape)
 
-        #save manual annotations and selection matrix
-        #np.savez("saved_gui_output", kpts=self.scene_kpts, sm=selection_matrix)
-
         #initialize quaternions and translations for each scene
         scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
         scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
@@ -103,6 +105,11 @@ class Process:
 
         #main optimization step
         res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
+
+        # and save the output
+        count = len(glob.glob('saved_opt_output*.npz'))
+        out_fn = os.path.join(self.output_dir, 'saved_opt_output_' + str(count))
+        np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
 
         #output from optimization
         len_ts = scene_t_ini[1:].size
