@@ -9,9 +9,15 @@ from skimage.util.shape import view_as_blocks
 np.set_printoptions(threshold=sys.maxsize, linewidth=700)
 np.set_printoptions(precision=4, suppress=True)
 
-def visualize_keypoints(X, Y, T, model_off_path):
+def visualize_keypoints(X, Y, T, model_off_path, scene_ply_path):
     vis_mesh_list = []
     vis_mesh_list.append(o3d.geometry.TriangleMesh.create_coordinate_frame(0.2))
+
+    if scene_ply_path is not None:
+        sce_mesh = o3d.io.read_point_cloud(scene_ply_path)
+        sce_mesh.transform(T)
+        #sce_mesh = sce_mesh.voxel_down_sample(voxel_size=0.002)
+        vis_mesh_list.append(sce_mesh)
 
     if model_off_path is not None:
         obj_mesh = o3d.io.read_triangle_mesh(model_off_path)
@@ -23,16 +29,24 @@ def visualize_keypoints(X, Y, T, model_off_path):
         keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.006)
         pt = np.dot(T[:3,:3], pt) + T[:3,3]
         keypt_mesh.translate(pt)
-        keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7]) #blue
+        keypt_mesh.paint_uniform_color([0.7, 0.1, 0.1]) #red
+        #keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7]) #blue
         vis_mesh_list.append(keypt_mesh)
 
     for pt in Y:
         keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.005)
         keypt_mesh.translate(pt)
-        keypt_mesh.paint_uniform_color([0.7, 0.1, 0.1]) #red
+        #keypt_mesh.paint_uniform_color([0.7, 0.1, 0.1]) #red
+        keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7]) #blue
         vis_mesh_list.append(keypt_mesh)
 
-    o3d.visualization.draw_geometries(vis_mesh_list)
+    def rotate_view(vis):
+        ctr = vis.get_view_control()
+        ctr.rotate(10.0, 0.0)
+        return False
+
+    #o3d.visualization.draw_geometries(vis_mesh_list)
+    o3d.visualization.draw_geometries_with_animation_callback(vis_mesh_list,rotate_view)
 
 def procrustes(X, Y, scaling=True, reflection='best'):
     n,m = X.shape
@@ -105,6 +119,7 @@ if __name__ == '__main__':
     ap.add_argument("--points", required=True)
     ap.add_argument("--input", required=True)
     ap.add_argument("--off", required=True)
+    ap.add_argument("--ply", required=True)
     ap.add_argument("--visualize", required=True, default=True)
     opt = ap.parse_args()
 
@@ -138,4 +153,4 @@ if __name__ == '__main__':
     print("Mean error: ", sum(err)/len(err))
     print("---")
     if visualize:
-        visualize_keypoints(obj_est, obj_all, T, opt.off)
+        visualize_keypoints(obj_est, obj_all, T, opt.off, opt.ply)
