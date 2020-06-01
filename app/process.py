@@ -6,7 +6,6 @@ import sys
 import open3d as o3d
 import scipy.optimize
 import app.optimize
-import glob
 
 class Process:
     def __init__(self, dataset_path, output_dir, scale):
@@ -106,9 +105,8 @@ class Process:
         #main optimization step
         res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
-        # and save the output
-        count = len(glob.glob('saved_opt_output*.npz'))
-        out_fn = os.path.join(self.output_dir, 'saved_opt_output_' + str(count))
+        # save the input and the output from optimization step
+        out_fn = os.path.join(self.output_dir, 'saved_opt_output')
         np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
 
         #output from optimization
@@ -120,6 +118,11 @@ class Process:
         out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q_ini[1:, :].shape)
         out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
         object_model = out_Ps.transpose()
+
+        # save the generated sparse object model
+        out_file = os.path.join(self.output_dir, "sparse_model.txt")
+        np.savetxt(out_file, out_Ps.squeeze())
+
         if res.success:
             np.set_printoptions(threshold=sys.maxsize, linewidth=700)
             np.set_printoptions(precision=5, suppress=True)
