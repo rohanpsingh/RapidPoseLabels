@@ -1,9 +1,9 @@
-import numpy as np
+import os
 import random
 import tkinter as tk
+import numpy as np
 import PIL.Image, PIL.ImageTk
 import cv2
-import os
 from app.process import Process
 
 class GUI:
@@ -37,36 +37,36 @@ class GUI:
         widget_wd = 25
         widget_ht = 3
         # Button definitions and placements
-        self.load_btn = tk.Button(self.tkroot, text="Load New Image", 
-                                  height=widget_ht, width=widget_wd, 
+        self.load_btn = tk.Button(self.tkroot, text="Load New Image",
+                                  height=widget_ht, width=widget_wd,
                                   state=tk.NORMAL,
                                   command=self.btn_func_load)
-        self.next_btn = tk.Button(self.tkroot, text="Next KeyPt", 
-                                  height=widget_ht, width=widget_wd, 
+        self.next_btn = tk.Button(self.tkroot, text="Next KeyPt",
+                                  height=widget_ht, width=widget_wd,
                                   state=tk.DISABLED,
                                   command=self.btn_func_next)
-        self.skip_btn = tk.Button(self.tkroot, text="Skip KeyPt", 
-                                  height=widget_ht, width=widget_wd, 
+        self.skip_btn = tk.Button(self.tkroot, text="Skip KeyPt",
+                                  height=widget_ht, width=widget_wd,
                                   state=tk.DISABLED,
                                   command=self.btn_func_skip)
-        self.reset_btn = tk.Button(self.tkroot, text="Reset", 
-                                   width=widget_wd, 
+        self.reset_btn = tk.Button(self.tkroot, text="Reset",
+                                   width=widget_wd,
                                    state=tk.DISABLED,
                                    command=self.btn_func_reset)
-        self.scene_btn = tk.Button(self.tkroot, text="Next Scene", 
-                                   width=widget_wd, 
+        self.scene_btn = tk.Button(self.tkroot, text="Next Scene",
+                                   width=widget_wd,
                                    state=tk.DISABLED,
                                    command=self.btn_func_scene)
-        self.compute_btn = tk.Button(self.tkroot, text="Compute", 
-                                     width=widget_wd, 
+        self.compute_btn = tk.Button(self.tkroot, text="Compute",
+                                     width=widget_wd,
                                      state=tk.DISABLED,
                                      command=self.btn_func_compute)
-        self.display_btn = tk.Button(self.tkroot, text="Visualize", 
-                                     width=widget_wd, 
+        self.display_btn = tk.Button(self.tkroot, text="Visualize",
+                                     width=widget_wd,
                                      state=tk.DISABLED,
                                      command=self.btn_func_display)
-        self.quit_btn = tk.Button(self.tkroot, text="Quit", 
-                                  width=widget_wd, 
+        self.quit_btn = tk.Button(self.tkroot, text="Quit",
+                                  width=widget_wd,
                                   state=tk.NORMAL,
                                   command=self.btn_func_quit)
         self.load_btn.grid(column=1, row=0, padx=10)
@@ -79,13 +79,13 @@ class GUI:
         self.quit_btn.grid(column=1, row=7, padx=10)
 
         # message box
-        self.msg_box = tk.Label(self.tkroot, 
+        self.msg_box = tk.Label(self.tkroot,
                                 text="Please load an image",
-                                height = 5, width=widget_wd, 
+                                height = 5, width=widget_wd,
                                 bg='blue', fg='white')
-        self.dat_box = tk.Label(self.tkroot, 
-                                text="Current keypoint list:\n{}".format(self.scene_kpts_2d), 
-                                height = 10, width=widget_wd, 
+        self.dat_box = tk.Label(self.tkroot,
+                                text="Current keypoint list:\n{}".format(self.scene_kpts_2d),
+                                height = 10, width=widget_wd,
                                 bg='blue', fg='white')
         self.msg_box.grid(column=1, row=8, padx=10)
         self.dat_box.grid(column=1, row=9, rowspan=3, padx=10, pady=10)
@@ -94,7 +94,7 @@ class GUI:
         self.canvas = tk.Canvas(self.tkroot, width = self.width, height = self.height)
         self.canvas.grid(column=0, row=0, rowspan=10, padx=10, pady=10)
         self.canvas.create_rectangle(0, 0, self.width, self.height, fill='blue')
-        
+
         self.tkroot.mainloop()
 
     def display_cv_image(self, img):
@@ -112,7 +112,7 @@ class GUI:
         self.msg_box.configure(text = "Keypoint added:\n{}".format(kp))
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
         self.clicked_pixel = []
-        
+
     def buttonClick(self, event):
         tmp = self.current_rgb_img.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
@@ -166,11 +166,11 @@ class GUI:
         self.scene_kpts_2d = []
         self.msg_box.configure(text = "Scene reset")
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
-        
+
     def btn_func_scene(self):
-        while (len(self.scene_kpts_2d) != self.num_keypoints):
+        while len(self.scene_kpts_2d) != self.num_keypoints:
             self.add_kp_to_list([])
-            
+
         self.process.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
         self.process.scene_cams.append(self.current_img_pos)
         self.process.scene_plys.append(self.current_mesh)
@@ -210,4 +210,3 @@ class GUI:
 
     def btn_func_quit(self):
         self.tkroot.destroy()
-

@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.optimize
 import transforms3d.quaternions as tfq
-import transforms3d.affines as tfa
 
 def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
 
@@ -11,12 +10,12 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
     len_ts = scene_t[1:].size
     len_qs = scene_q[1:].size
     len_Ps = scene_P.size
-    
+
     #constraint function
     def cons_func(x):
         qs = x[len_ts : len_ts+len_qs].reshape(scene_q[1:,:].shape)
         return np.asarray([(np.linalg.norm(tfq.qnorm(q)**2-1)) for q in qs])
-        
+
     #rotate point using quaternion function
     def rotate(q, pt):
         qmult1 = tfq.qmult(q,(np.append(0, pt).transpose()))
