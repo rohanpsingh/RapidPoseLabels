@@ -5,70 +5,63 @@ import transforms3d.affines as tfa
 import sys
 import cv2
 import os
-from itertools import combinations
 import evaluate3d
+from src.generate import Annotations
 
 np.set_printoptions(threshold=sys.maxsize, linewidth=700)
 np.set_printoptions(precision=4, suppress=True)
 
 
-class Evaluate:
+class Evaluate(Annotations):
     def __init__(self, dataset_path, input_arr_path, picked_pts, visualize):
+        """
+        Constructor for Evaluate class.
+        Input arguments:
+        dataset_path   - path to root dataset directory
+        input_arr_path - path to input npz zipped archive
+        picekd_pts     - path to *.pp file for true object keypoints
+        visualize      - set 'True' to visualize
+        """
+        super().__init__(dataset_path, input_arr_path, False)
+        self.picked_pts = picked_pts
+        self.visualize = visualize
 
-        self.dataset_path = dataset_path
-        self.input_array  = np.load(input_arr_path)
-        self.picked_pts   = picked_pts
-        self.visualize    = (visualize.lower()=='true')
-
-        self.cam_mat = np.eye(3)
-        with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
-            camera_intrinsics = file.readlines()[0].split()
-            camera_intrinsics = list(map(float, camera_intrinsics))
-        self.cam_mat[0,0] = camera_intrinsics[0]
-        self.cam_mat[1,1] = camera_intrinsics[1]
-        self.cam_mat[0,2] = camera_intrinsics[2]
-        self.cam_mat[1,2] = camera_intrinsics[3]
-
-        self.num_scenes = self.input_array['ref'].shape[0]
-        self.num_keypts = self.input_array['ref'].shape[2]
-        self.list_of_scene_dirs = [d for d in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, d))]
-        self.list_of_scene_dirs.sort()
-        self.list_of_scene_dirs = self.list_of_scene_dirs[:self.num_scenes]
-        print("List of scenes: ", self.list_of_scene_dirs)
-        print("Number of scenes: ", self.num_scenes)
-        print("Number of keypoints: ", self.num_keypts)
-        self.width = 640
-        self.height = 480
-        self.bbox_scale = 1.5
-        self.viz_count=0
-
-    def get_true_model(self, sce_id):
+    def get_true_model(self):
+        """
+        Function to find 3D positions of each defined keypoints in the frame of
+        every scene origin. Uses the .npz zipped archive to get relative scene
+        transformations, the selection matrix etc.
+        Returns a list of (Nx3) 2D numpy arrays where each i-th array in the list
+        holds the 3D keypoint pose configuration of the object in the i-th scene.
+        """
+        list_of_poses = []
         ref_keypts = self.input_array['ref']
         select_mat = self.input_array['sm']
-        opt_output = self.input_array['res']
+        viz_count = 0
+        for sce_id, _ in enumerate(self.list_of_scene_dirs):
+            select_mat_block = select_mat[3*viz_count:, sce_id*(3*self.num_keypts):(sce_id+1)*3*self.num_keypts]
+            vis_vec = evaluate3d.get_visibility(select_mat_block)
+            obj_man = evaluate3d.get_object_manual(ref_keypts[sce_id], vis_vec)
+            obj_def = evaluate3d.get_object_definition(self.picked_pts, vis_vec)
+            d, Z, tform = evaluate3d.procrustes(obj_def, obj_man, False)
 
-        select_mat_block = select_mat[3*self.viz_count:, sce_id*(3*self.num_keypts):(sce_id+1)*3*self.num_keypts]
-        vis_vec = evaluate3d.get_visibility(select_mat_block)
-        obj_man = evaluate3d.get_object_manual(ref_keypts[sce_id], vis_vec)
-        obj_def = evaluate3d.get_object_definition(self.picked_pts, vis_vec)
-        d, Z, tform = evaluate3d.procrustes(obj_def, obj_man, False)
+            T = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
+            T = np.linalg.inv(T)
+            obj_all = evaluate3d.get_object_definition(self.picked_pts, np.ones(self.num_keypts))
+            true_object = np.asarray([(T[:3,:3].dot(pt) + T[:3,3]) for pt in obj_all])
+            viz_count += len(np.nonzero(vis_vec)[0])
+            list_of_poses.append(true_object)
+        return list_of_poses
 
-        T = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
-        T = np.linalg.inv(T)
-        obj_all = evaluate3d.get_object_definition(self.picked_pts, np.ones(self.num_keypts))
-        self.true_object = np.asarray([(T[:3,:3].dot(pt) + T[:3,3]) for pt in obj_all])
-        self.viz_count += len(np.nonzero(vis_vec)[0])
-        return 
-
-    def project3Dto2D(self, input_points, input_T):
-        tf = input_T
-        rvec,_ = cv2.Rodrigues(tf[:3, :3])
-        tvec = tf[:3,3]
-        imgpts,_ = cv2.projectPoints(input_points, rvec, tvec, self.cam_mat, None)
-        keypts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
-        return keypts
-        
-    def visualize_keypts(self, input_img, pts1, pts2):
+    def visualize_joint(self, input_img, pts1, pts2):
+        """
+        Function to draw two sets of 2D points (estimated and ground-truth)
+        on the input image. Uses opencv draw functions.
+        Input arguments:
+        input_img - input RGB image (image will be modified)
+        pts1      - (Nx2) numpy array of 2D key points (green)
+        pts2      - (Nx2) numpy array of 2D key points (red)
+        """
         for p in range(pts1.shape[0]):
             cv2.circle(input_img, tuple((int(pts1[p,0]), int(pts1[p,1]))), 3, (255,0,0), -1)
         for p in range(pts2.shape[0]):
@@ -77,67 +70,62 @@ class Evaluate:
         cv2.waitKey(10)
         return
 
-    def process_input(self, dbg=False):
-        ref_keypts = self.input_array['ref']
-        select_mat = self.input_array['sm']
-        opt_output = self.input_array['res']
-
-        out_ts = opt_output[ :(self.num_scenes-1)*3].reshape((self.num_scenes-1, 3))
-        out_qs = opt_output[(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
-        out_Ps = opt_output[(self.num_scenes-1)*7 : ].reshape((self.num_keypts, 3))
-        out_Ts = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
-        self.object_model = out_Ps
-        self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_Ts))
-        if dbg:
-            np.set_printoptions(precision=5, suppress=True)
-            print("--------\n--------\n--------")
-            print("Output translations:\n", out_ts)
-            print("Output quaternions:\n", out_qs)
-            print("Output points:\n", out_Ps, out_Ps.shape)
-            print("--------\n--------\n--------")
-            print("Input points:\n", ref_keypts[0])
-        return
-
     def get_pixel_errors(self):
+        """
+        Function to compute 2D distance error between the estimated 2D keypoints and
+        projections of ground-truth 3D keypoints.
+        Returns a list of scene-wise errors.
+        """
         scene_err_list = []
+        true_poses = self.get_true_model()
         for idx, (cur_scene_dir, sce_T) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
             err = []
-            self.get_true_model(idx)
+            #read the names of image frames in this scene
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'associations.txt'), 'r') as file:
                 img_name_list = file.readlines()
+
+            #read the camera pose corresponding to each frame
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'camera.poses'), 'r') as file:
                 cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
+
             for img_name, cam_pose in zip(img_name_list, cam_pose_list):
+                #read the RGB images using opencv
                 img_name = img_name.split()
                 rgb_im_path = os.path.join(self.dataset_path, cur_scene_dir, img_name[3])
                 input_rgb_image = cv2.resize(cv2.imread(rgb_im_path), (self.width, self.height))
+                #compose 4x4 camera pose matrix
                 cam_T = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
-                estpts = self.project3Dto2D(self.object_model, np.dot(np.linalg.inv(cam_T), sce_T))
-                trupts = self.project3Dto2D(self.true_object, np.linalg.inv(cam_T))
+                #get estimated 2D positions of keypoints
+                estpts, _, _ = self.project3Dto2D(self.object_model, np.dot(np.linalg.inv(cam_T), sce_T))
+                #get the ground truth 2D positions of keypoints
+                trupts, _, _ = self.project3Dto2D(true_poses[idx], np.linalg.inv(cam_T))
+
+                #calculate the error distance
+                err.extend([((x-y)**2).sum()**0.5 for (x,y) in zip(trupts, estpts)])
+                #visualize if required
                 if self.visualize:
-                    self.visualize_keypts(input_rgb_image, estpts, trupts)
-                for (x,y) in zip(trupts, estpts):
-                    err.append(((x-y)**2).sum()**0.5)
+                    self.visualize_joint(input_rgb_image, estpts, trupts)
             scene_err_list.append(err)
         return scene_err_list
-                
 
 if __name__ == '__main__':
 
+    #get command line arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", required=True)
-    ap.add_argument("--points", required=True)
-    ap.add_argument("--input", required=True)
-    ap.add_argument("--visualize", required=True, default=True)
+    ap.add_argument("--dataset", required=True, help='path to root dir of raw dataset')
+    ap.add_argument("--input", required=True, help='path to input .npz zipped archive')
+    ap.add_argument("--points", required=True, help='path to *.pp file for true sparse model')
+    ap.add_argument("--visualize", action='store_true', help='to visualize each label')
     opt = ap.parse_args()
 
+    #generate annotations and obtain errors
     lab = Evaluate(opt.dataset, opt.input, opt.points, opt.visualize)
     lab.process_input(False)
     error_vec = lab.get_pixel_errors()
 
     mean_error = 0
-    for e in error_vec:
-        print("scene error: ", sum(e)/len(e))
+    for idx, e in enumerate(error_vec):
+        print("scene {} error: {}".format(idx, sum(e)/len(e)))
         mean_error += (sum(e)/len(e))
     print("Mean error: ", mean_error/len(error_vec))
     print("---")
