@@ -43,6 +43,6 @@ def predict(ref_kpts, scene_t, scene_q, scene_P, select_mat):
     ini_vals = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten(), scene_P.flatten()))
 
     #perform optimization
-    res = scipy.optimize.minimize(error_func, ini_vals, constraints=cons, method='SLSQP', tol=1e-9, options={'disp':True,'ftol':1e-9, 'maxiter':1000})
+    res = scipy.optimize.minimize(error_func, ini_vals, constraints=cons, method='SLSQP', tol=1e-8, options={'disp':True,'ftol':1e-8, 'maxiter':1000})
 
     return res

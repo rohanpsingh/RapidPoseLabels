@@ -4,8 +4,6 @@ import cv2
 import numpy as np
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
-from itertools import combinations
-import evaluate3d
 
 class Annotations:
     def __init__(self, dataset_path, input_arr_path, output_dir, visualize=False):
