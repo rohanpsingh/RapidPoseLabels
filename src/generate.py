@@ -20,6 +20,13 @@ class Annotations:
         self.output_dir   = output_dir
         self.visualize    = visualize
 
+        #create directories if they dont exist
+        if not os.path.isdir(os.path.join(self.output_dir, 'bboxes')): os.makedirs(os.path.join(self.output_dir, 'bboxes'));
+        if not os.path.isdir(os.path.join(self.output_dir, 'center')): os.makedirs(os.path.join(self.output_dir, 'center'));
+        if not os.path.isdir(os.path.join(self.output_dir, 'scale')): os.makedirs(os.path.join(self.output_dir, 'scale'));
+        if not os.path.isdir(os.path.join(self.output_dir, 'label')): os.makedirs(os.path.join(self.output_dir, 'label'));
+        if not os.path.isdir(os.path.join(self.output_dir, 'frames')): os.makedirs(os.path.join(self.output_dir, 'frames'));
+
         #read camera intrinsics matrix from camera.txt in root directory
         self.cam_mat = np.eye(3)
         with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
@@ -58,18 +65,10 @@ class Annotations:
         (https://github.com/rohanpsingh/ObjectKeypointTrainer#preparing-the-dataset).
         Bounding-boxes are saved in the format as expected by darknet-yolov3
         (https://github.com/rohanpsingh/ObjectKeypointTrainer#preparing-the-dataset).
-        Sub-directories will be created if not exists.
         Input arguments:
         sample - labeled sample (RGB image, (keypoint, center pos, scale))
         index  - counter for naming images
         """
-        #create directories if they dont exist
-        if not os.path.isdir(os.path.join(self.output_dir, 'bboxes')): os.makedirs(os.path.join(self.output_dir, 'bboxes'));
-        if not os.path.isdir(os.path.join(self.output_dir, 'center')): os.makedirs(os.path.join(self.output_dir, 'center'));
-        if not os.path.isdir(os.path.join(self.output_dir, 'scale')): os.makedirs(os.path.join(self.output_dir, 'scale'));
-        if not os.path.isdir(os.path.join(self.output_dir, 'label')): os.makedirs(os.path.join(self.output_dir, 'label'));
-        if not os.path.isdir(os.path.join(self.output_dir, 'frames')): os.makedirs(os.path.join(self.output_dir, 'frames'));
-
         rgb_image = sample[0]
         kpt_label = sample[1][0]
         cen_label = sample[1][1]
@@ -167,9 +166,10 @@ class Annotations:
     def generate_labels(self):
         """
         Main function to generate labels for RGB images according to provided input array.
-        Returns count of total number of samples produced.
+        Returns a list of samples where each sample is tuple of the RGB image and the 
+        associated label, where each label is a tuple of the keypoints, center and scale.
         """
-        counter=0
+        samples = []
         #iterate through a zip of list of scene dirs and the relative scene tfs
         for data_dir_idx, (cur_scene_dir, sce_T) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
 
@@ -192,11 +192,9 @@ class Annotations:
                 cam_T = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
                 #get 2D positions of keypoints, centers and scale of bounding box
                 label = self.project3Dto2D(self.object_model, np.dot(np.linalg.inv(cam_T), sce_T), input_rgb_image.copy())
-                #write sample to disk
-                self.writeToDisk((input_rgb_image, label), counter)
-                counter+=1
+                samples.append((input_rgb_image, label))
             print("Created {} labeled samples from dataset {} (with {} raw samples).".format(len(zipped_list), data_dir_idx, len(img_name_list)))
-        return counter
+        return samples
 
 if __name__ == '__main__':
 
@@ -210,10 +208,12 @@ if __name__ == '__main__':
 
     #set up Annotations
     lab = Annotations(opt.dataset, opt.input, opt.output, opt.visualize)
-
     #extract useful information from input array
     lab.process_input(False)
-
     #generate labels and writes to output directory
-    counter = lab.generate_labels()
-    print("Total number of samples generated: {}".format(counter))
+    samples = lab.generate_labels()
+    #write each sample to disk
+    for counter, sample in enumerate(samples):
+        lab.writeToDisk(sample, counter)
+        print("Saved sample: {}".format(repr(counter).zfill(5)), end="\r", flush=True)
+    print("Total number of samples generated: {}".format(len(samples)))
