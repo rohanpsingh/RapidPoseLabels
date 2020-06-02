@@ -16,9 +16,9 @@ class DatasetWriter:
         #create sub-directories if they dont exist
         for dir_name in ["bboxes", "center", "scale", "label", "frames"]:
             if not os.path.isdir(os.path.join(self.output_dir, dir_name)):
-                os.makedirs(os.path.join(self.output_dir, dir_name));
+                os.makedirs(os.path.join(self.output_dir, dir_name))
 
-    def writeToDisk(self, sample, index):
+    def write_to_disk(self, sample, index):
         """
         Function to write the generated sample (keypoint, center, scale and the RGB image)
         in a format as expected by the ObjectKeypointTrainer training module
@@ -98,6 +98,11 @@ class Annotations:
         #define a ratio of labeled samples to produce
         self.ratio = 10
 
+        #this is the object model
+        self.object_model = []
+        #these are the relative scene transformations
+        self.scene_tfs = []
+
     def visualize_sample(self, sample):
         """
         Visualize using opencv draw functions if self.visualize is set True.
@@ -109,8 +114,8 @@ class Annotations:
         bbox_cn = sample[1][1]
         bbox_sd = sample[1][2]*200
         #draw keypoints
-        for p in keypts:
-            cv2.circle(input_img, tuple(map(int, p)), 5, (255, 0, 0), -1)
+        for point in keypts:
+            cv2.circle(input_img, tuple(map(int, point)), 5, (255, 0, 0), -1)
         #draw bounding-box
         cv2.rectangle(input_img,
                       (int(bbox_cn[0]-(bbox_sd/2)), int(bbox_cn[1]-(bbox_sd/2))),
@@ -120,7 +125,7 @@ class Annotations:
         cv2.waitKey(50)
         return
 
-    def project3Dto2D(self, input_points, input_pose):
+    def project_points(self, input_points, input_pose):
         """
         Function to project the sparse object model onto the RGB image
         according to the provided pose of the object model in camera frame.
@@ -147,44 +152,33 @@ class Annotations:
         bbox_cn = ((xmax+xmin)/2, (ymax+ymin)/2)
         bbox_sd = max((xmax-xmin), (ymax-ymin))*self.bbox_scale
         return keypts, bbox_cn, bbox_sd/200.0
-        
-    def process_input(self, debug=False):
+
+    def process_input(self):
         """
         Function to extract data from the input array.
         Input array is the output of the optimization step
         which holds the generated sparse model of the object
         and the relative scene transformations.
-        Set debug=True to print metadata.
         """
-        #get scene transforamtions from input array
-        out_ts = self.input_array['res'][ :(self.num_scenes-1)*3].reshape((self.num_scenes-1, 3))
-        out_qs = self.input_array['res'][(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
-        out_Ts = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
-        #get object model from input_array
-        out_Ps = self.input_array['res'][(self.num_scenes-1)*7 : ].reshape((self.num_keypts, 3))
+        #get the relative scene transforamtions from input array
+        out_ts  = self.input_array['res'][ :(self.num_scenes-1)*3].reshape((self.num_scenes-1, 3))
+        out_qs  = self.input_array['res'][(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
+        out_tfs = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
+        self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_tfs))
 
-        #this is the object model
-        self.object_model = out_Ps
-        #these are the relative scene transformations
-        self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_Ts))
-        if debug:
-            np.set_printoptions(precision=5, suppress=True)
-            print("--------\n--------\n--------")
-            print("Output translations:\n", out_ts)
-            print("Output quaternions:\n", out_qs)
-            print("Output points:\n", out_Ps, out_Ps.shape)
-            print("--------\n--------\n--------")
+        #get object model from input_array
+        self.object_model  = self.input_array['res'][(self.num_scenes-1)*7 : ].reshape((self.num_keypts, 3))
         return
 
     def generate_labels(self):
         """
         Main function to generate labels for RGB images according to provided input array.
-        Returns a list of samples where each sample is tuple of the RGB image and the 
+        Returns a list of samples where each sample is tuple of the RGB image and the
         associated label, where each label is a tuple of the keypoints, center and scale.
         """
         samples = []
         #iterate through a zip of list of scene dirs and the relative scene tfs
-        for data_dir_idx, (cur_scene_dir, sce_T) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
+        for data_dir_idx, (cur_scene_dir, sce_t) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
 
             #read the names of image frames in this scene
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'associations.txt'), 'r') as file:
@@ -196,15 +190,15 @@ class Annotations:
 
             #generate labels only for a fraction of total images in scene
             zipped_list = list(zip(img_name_list, cam_pose_list))[::self.ratio]
-            for idx, (img_name, cam_pose) in enumerate(zipped_list):
+            for img_name, cam_pose in zipped_list:
                 #read the RGB images using opencv
                 img_name = img_name.split()
                 rgb_im_path = os.path.join(self.dataset_path, cur_scene_dir, img_name[3])
                 input_rgb_image = cv2.resize(cv2.imread(rgb_im_path), (self.width, self.height))
                 #compose 4x4 camera pose matrix
-                cam_T = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
+                cam_t = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
                 #get 2D positions of keypoints, centers and scale of bounding box
-                label = self.project3Dto2D(self.object_model, np.dot(np.linalg.inv(cam_T), sce_T))
+                label = self.project_points(self.object_model, np.dot(np.linalg.inv(cam_t), sce_t))
                 samples.append((input_rgb_image, label))
 
                 #visualize if required
@@ -225,15 +219,15 @@ if __name__ == '__main__':
     opt = ap.parse_args()
 
     #set up Annotations
-    lab = Annotations(opt.dataset, opt.input, opt.visualize)
+    label_generator = Annotations(opt.dataset, opt.input, opt.visualize)
     #extract useful information from input array
-    lab.process_input(False)
+    label_generator.process_input()
     #generate labels and writes to output directory
-    samples = lab.generate_labels()
+    samples = label_generator.generate_labels()
 
     #write each sample to disk
-    writer = DatasetWriter(opt.output)
-    for counter, sample in enumerate(samples):
-        writer.writeToDisk(sample, counter)
+    label_writer = DatasetWriter(opt.output)
+    for counter, item in enumerate(samples):
+        label_writer.write_to_disk(item, counter)
         print("Saved sample: {}".format(repr(counter).zfill(5)), end="\r", flush=True)
     print("Total number of samples generated: {}".format(len(samples)))

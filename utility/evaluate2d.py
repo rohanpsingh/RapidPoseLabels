@@ -1,10 +1,10 @@
-import numpy as np
+import os
+import sys
 import argparse
+import numpy as np
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
-import sys
 import cv2
-import os
 import evaluate3d
 from src.generate import Annotations
 
@@ -43,7 +43,7 @@ class Evaluate(Annotations):
             vis_vec = evaluate3d.get_visibility(select_mat_block)
             obj_man = evaluate3d.get_object_manual(ref_keypts[sce_id], vis_vec)
             obj_def = evaluate3d.get_object_definition(self.picked_pts, vis_vec)
-            d, Z, tform = evaluate3d.procrustes(obj_def, obj_man, False)
+            _, _, tform = evaluate3d.procrustes(obj_def, obj_man, False)
 
             T = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
             T = np.linalg.inv(T)
@@ -62,10 +62,10 @@ class Evaluate(Annotations):
         pts1      - (Nx2) numpy array of 2D key points (green)
         pts2      - (Nx2) numpy array of 2D key points (red)
         """
-        for p in range(pts1.shape[0]):
-            cv2.circle(input_img, tuple((int(pts1[p,0]), int(pts1[p,1]))), 3, (255,0,0), -1)
-        for p in range(pts2.shape[0]):
-            cv2.circle(input_img, tuple((int(pts2[p,0]), int(pts2[p,1]))), 3, (0,255,0), -1)
+        for point in pts1:
+            cv2.circle(input_img, tuple(map(int, point)), 3, (255,0,0), -1)
+        for point in pts2:
+            cv2.circle(input_img, tuple(map(int, point)), 3, (0,255,0), -1)
         cv2.imshow('win', input_img)
         cv2.waitKey(10)
         return
@@ -78,7 +78,7 @@ class Evaluate(Annotations):
         """
         scene_err_list = []
         true_poses = self.get_true_model()
-        for idx, (cur_scene_dir, sce_T) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
+        for idx, (cur_scene_dir, sce_t) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
             err = []
             #read the names of image frames in this scene
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'associations.txt'), 'r') as file:
@@ -94,11 +94,11 @@ class Evaluate(Annotations):
                 rgb_im_path = os.path.join(self.dataset_path, cur_scene_dir, img_name[3])
                 input_rgb_image = cv2.resize(cv2.imread(rgb_im_path), (self.width, self.height))
                 #compose 4x4 camera pose matrix
-                cam_T = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
+                cam_t = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
                 #get estimated 2D positions of keypoints
-                estpts, _, _ = self.project3Dto2D(self.object_model, np.dot(np.linalg.inv(cam_T), sce_T))
+                estpts, _, _ = self.project_points(self.object_model, np.dot(np.linalg.inv(cam_t), sce_t))
                 #get the ground truth 2D positions of keypoints
-                trupts, _, _ = self.project3Dto2D(true_poses[idx], np.linalg.inv(cam_T))
+                trupts, _, _ = self.project_points(true_poses[idx], np.linalg.inv(cam_t))
 
                 #calculate the error distance
                 err.extend([((x-y)**2).sum()**0.5 for (x,y) in zip(trupts, estpts)])
@@ -119,13 +119,13 @@ if __name__ == '__main__':
     opt = ap.parse_args()
 
     #generate annotations and obtain errors
-    lab = Evaluate(opt.dataset, opt.input, opt.points, opt.visualize)
-    lab.process_input(False)
-    error_vec = lab.get_pixel_errors()
+    evaluator = Evaluate(opt.dataset, opt.input, opt.points, opt.visualize)
+    evaluator.process_input()
+    error_vec = evaluator.get_pixel_errors()
 
     mean_error = 0
-    for idx, e in enumerate(error_vec):
-        print("scene {} error: {}".format(idx, sum(e)/len(e)))
+    for index, e in enumerate(error_vec):
+        print("scene {} error: {}".format(index, sum(e)/len(e)))
         mean_error += (sum(e)/len(e))
     print("Mean error: ", mean_error/len(error_vec))
     print("---")
