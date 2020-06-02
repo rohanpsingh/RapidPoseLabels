@@ -60,7 +60,7 @@ class Annotations:
         (https://github.com/rohanpsingh/ObjectKeypointTrainer#preparing-the-dataset).
         Sub-directories will be created if not exists.
         Input arguments:
-        sample - labeled samples (RGB image, (keypoint, center pos, scale))
+        sample - labeled sample (RGB image, (keypoint, center pos, scale))
         index  - counter for naming images
         """
         #create directories if they dont exist
@@ -151,7 +151,7 @@ class Annotations:
         #get object model from input_array
         out_Ps = self.input_array['res'][(self.num_scenes-1)*7 : ].reshape((self.num_keypts, 3))
 
-        #this is the object mode
+        #this is the object model
         self.object_model = out_Ps
         #these are the relative scene transformations
         self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_Ts))
