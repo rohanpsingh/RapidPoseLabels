@@ -16,7 +16,6 @@ class Process:
         """
         self.scene_imgs = []
         self.scene_cams = []
-        self.scene_plys = []
         self.scene_kpts = []
         self.pts_in_3d  = []
         self.select_vec = []
@@ -75,7 +74,8 @@ class Process:
         vis_mesh_list = []
         scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
         vis_mesh_list.append(scene_cloud)
-        for keypt in scene_obj_kpts.transpose():
+        print("points shape", scene_obj_kpts.shape)
+        for keypt in scene_obj_kpts:
             keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
             keypt_mesh.translate(keypt)
             keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
@@ -94,12 +94,12 @@ class Process:
         filename     - name of the output file inside the output directory.
                        (sparse_model.txt by default)
         """
-        out_str = []
-        out_str.append(str("<SparseObjectPoints>"))
+        out_str = ["<SparseObjectPoints>"]
         for idx, point in enumerate(object_model):
-            kpt_str = str("\t<point x=\"{}\" y=\"{}\" z=\"{}\" name=\"{}\"/>".format(point[0], point[1], point[2], idx))
+            kpt_str = str("\t<point x=\"{}\" y=\"{}\" z=\"{}\"".format(*list(point)))
+            kpt_str = kpt_str + str(" name=\"{}\"/>".format(idx))
             out_str.append(kpt_str)
-        out_str.append(str("</SparseObjectPoints>"))
+        out_str.append("</SparseObjectPoints>")
         with open(os.path.join(self.output_dir, filename), 'w') as out_file:
             out_file.write("\n".join(out_str))
         return
@@ -133,7 +133,7 @@ class Process:
         len_ts = scene_t_ini[1:].size
         len_qs = scene_q_ini[1:].size
         object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
-        object_model = object_model.transpose().squeeze()
+        object_model = object_model.squeeze()
 
         # save the generated sparse object model
         self.sparse_model_writer(object_model)

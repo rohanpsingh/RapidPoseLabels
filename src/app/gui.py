@@ -23,8 +23,11 @@ class GUI:
 
         #set up the Process object
         self.process = Process(dataset_path, output_dir, scale)
-        self.clicked_pixel = []
+
+        #member variables
+        self.scene_ply_paths = []
         self.scene_kpts_2d = []
+        self.clicked_pixel = []
         self.image_loaded=False
 
         # assumes images are 640x480
@@ -175,7 +178,7 @@ class GUI:
 
         self.process.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
         self.process.scene_cams.append(self.current_img_pos)
-        self.process.scene_plys.append(self.current_mesh)
+        self.scene_ply_paths.append(self.current_mesh)
 
         self.clicked_pixel = []
         self.scene_kpts_2d = []
@@ -202,6 +205,9 @@ class GUI:
         print("Flags: ", self.process.select_vec[-self.num_keypoints:])
 
     def btn_func_compute(self):
+        """
+        Function to perform the optimization step.
+        """
         #2D-to-3D conversion
         self.process.convert_2d_to_3d()
         #transform points to origins of respective scene
@@ -209,7 +215,7 @@ class GUI:
         #final computation step
         res, obj = self.process.compute()
         #visualize the generated object model in first scene
-        self.process.visualize_points_in_scene(self.process.scene_plys[0], obj)
+        self.process.visualize_points_in_scene(self.scene_ply_paths[0], obj)
 
     def btn_func_display(self):
         """
@@ -221,7 +227,7 @@ class GUI:
         #transform points to origins of respective scene
         self.process.transform_points()
         #visualize the labeled keypoints in scene
-        self.process.visualize_points_in_scene(self.current_mesh, self.process.scene_kpts[-1][np.newaxis,:])
+        self.process.visualize_points_in_scene(self.current_mesh, self.process.scene_kpts[-1].transpose())
         return
 
     def btn_func_quit(self):
