@@ -3,6 +3,7 @@ import numpy as np
 import transforms3d as tf
 import open3d as o3d
 import app.optimize
+import app.geo_constrain
 
 class Process:
     def __init__(self, dataset_path, output_dir, scale):
@@ -21,6 +22,7 @@ class Process:
         self.select_vec = []
         self.scale = scale
         self.output_dir = output_dir
+        self.sparse_model_file = '/home/rohan/rohan_m15x/project_src/iros2020/src/rapid_labels/src/tmp/sparse_model.txt'
 
         # create output dir if not exists
         if not os.path.isdir(self.output_dir):
@@ -103,12 +105,21 @@ class Process:
             out_file.write("\n".join(out_str))
         return
 
-    def compute(self):
+    def compute(self, procrustes=False):
         """
         Function to compute the sparse model and the relative scene transformations
         through optimization.
         Returns a success boolean.
         """
+        if True:
+            res = app.geo_constrain.predict(self.sparse_model_file, self.scene_kpts, self.select_vec)
+
+            #save the input and the output from optimization step
+            out_fn = os.path.join(self.output_dir, 'saved_opt_output')
+            np.savez(out_fn, res=res, ref=self.scene_kpts, sm=selection_matrix)
+
+            return True, res
+        
         #populate selection matrix from select_vec
         total_kpt_count  = len(self.select_vec)
         found_kpt_count  = len(np.nonzero(self.select_vec)[0])
@@ -124,10 +135,6 @@ class Process:
         #main optimization step
         res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
-        #save the input and the output from optimization step
-        out_fn = os.path.join(self.output_dir, 'saved_opt_output')
-        np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
-
         #extract generated sparse object model optimization output
         len_ts = scene_t_ini[1:].size
         len_qs = scene_q_ini[1:].size
@@ -136,6 +143,10 @@ class Process:
 
         # save the generated sparse object model
         self.sparse_model_writer(object_model)
+
+        #save the input and the output from optimization step
+        out_fn = os.path.join(self.output_dir, 'saved_opt_output')
+        np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
 
         if res.success:
             print("--------\n--------\n--------")
