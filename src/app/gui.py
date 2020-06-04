@@ -84,9 +84,6 @@ class GUI(TkRoot):
         self.clicked_pixel = [event.x, event.y]
         self.add_kp_to_list(self.clicked_pixel)
 
-    def btn_func_next(self):
-        self.add_kp_to_list(self.clicked_pixel)
-
     def btn_func_skip(self):
         self.add_kp_to_list([])
 
@@ -133,7 +130,6 @@ class GUI(TkRoot):
         self.canvas.bind('<Double-Button-1>', self.double_button_click)
         self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
         self.image_loaded=True
-        self.next_btn.configure(state=tk.NORMAL)
         self.skip_btn.configure(state=tk.NORMAL)
         self.reset_btn.configure(state=tk.NORMAL)
         self.scene_btn.configure(state=tk.NORMAL)
@@ -167,7 +163,6 @@ class GUI(TkRoot):
         self.canvas.unbind('<Button-1>')
         self.canvas.unbind('<Double-Button-1>')
         self.image_loaded=False
-        self.next_btn.configure(state=tk.DISABLED)
         self.skip_btn.configure(state=tk.DISABLED)
         self.reset_btn.configure(state=tk.DISABLED)
         self.scene_btn.configure(state=tk.DISABLED)

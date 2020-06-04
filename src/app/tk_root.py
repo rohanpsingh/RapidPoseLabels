@@ -17,10 +17,6 @@ class TkRoot:
                                   height=widget_ht, width=widget_wd,
                                   state=tk.NORMAL,
                                   command=self.btn_func_load)
-        self.next_btn = tk.Button(self.tkroot, text="Next KeyPt",
-                                  height=widget_ht, width=widget_wd,
-                                  state=tk.DISABLED,
-                                  command=self.btn_func_next)
         self.skip_btn = tk.Button(self.tkroot, text="Skip KeyPt",
                                   height=widget_ht, width=widget_wd,
                                   state=tk.DISABLED,
@@ -46,7 +42,6 @@ class TkRoot:
                                   state=tk.NORMAL,
                                   command=self.btn_func_quit)
         self.load_btn.grid(column=1, row=0, padx=10)
-        self.next_btn.grid(column=1, row=1, padx=10)
         self.skip_btn.grid(column=1, row=2, padx=10)
         self.reset_btn.grid(column=1, row=3, padx=10)
         self.scene_btn.grid(column=1, row=4, padx=10)
@@ -76,9 +71,6 @@ class TkRoot:
         self.tkroot.mainloop()
 
     def btn_func_load(self):
-        pass
-
-    def btn_func_next(self):
         pass
 
     def btn_func_skip(self):
