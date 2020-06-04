@@ -33,7 +33,7 @@ class Process:
 
     def convert_2d_to_3d(self):
         """
-        Function to convert 2D keypoint pixel to 3D points in scene.
+        Function to convert 2D keypoint pixels to 3D points in scene.
         """
         self.select_vec = []
         pts_3d = []
@@ -74,7 +74,6 @@ class Process:
         vis_mesh_list = []
         scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
         vis_mesh_list.append(scene_cloud)
-        print("points shape", scene_obj_kpts.shape)
         for keypt in scene_obj_kpts:
             keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
             keypt_mesh.translate(keypt)
