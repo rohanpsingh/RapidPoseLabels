@@ -1,19 +1,25 @@
+import os
 import numpy as np
 import transforms3d as tf
-import cv2
-import os
-import sys
 import open3d as o3d
-import scipy.optimize
 import app.optimize
 
 class Process:
     def __init__(self, dataset_path, output_dir, scale):
+        """
+        Constructor for Process class.
+        Input arguments:
+        dataset_path   - path to root dataset directory
+        output_dir     - path to output directory
+        scale          - scale parameter of the RGB-D sensor
+                         (1000 for Intel RealSense D435)
+        """
         self.scene_imgs = []
         self.scene_cams = []
         self.scene_plys = []
         self.scene_kpts = []
         self.pts_in_3d  = []
+        self.select_vec = []
         self.scale = scale
         self.output_dir = output_dir
 
@@ -26,11 +32,13 @@ class Process:
             self.camera_intrinsics = file.readlines()[0].split()
             self.camera_intrinsics = list(map(float, self.camera_intrinsics))
 
-    #2D-to-3D conversion
-    def convert_2Dto3D(self):
+    def convert_2d_to_3d(self):
+        """
+        Function to convert 2D keypoint pixel to 3D points in scene.
+        """
         self.select_vec = []
         pts_3d = []
-        for rgb, dep, pts in self.scene_imgs:
+        for _, dep, pts in self.scene_imgs:
             w = []
             for pt in pts:
                 pt3d_z = (dep[pt[1], pt[0]])*(1.0/self.scale)
@@ -46,18 +54,24 @@ class Process:
             pts_3d.append(w)
         pts_3d = np.asarray(pts_3d).transpose(0,2,1)
         self.pts_in_3d = pts_3d
+        return
 
-    #transform points to first cams in respective scene
     def transform_points(self):
+        """
+        Function to transform 3D points to the origins of respective scenes.
+        """
         scene_tf = []
         for scene_pts, pose in zip(self.pts_in_3d, self.scene_cams):
             pose_t = np.asarray(pose[:3])[:, np.newaxis]
             pose_q = np.asarray([pose[-1]] + pose[3:-1])
             scene_tf.append(tf.quaternions.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
         self.scene_kpts = np.asarray(scene_tf)
+        return
 
-    #visualization function
-    def visualize_scene(self, scene_ply_path, scene_obj_kpts):
+    def visualize_points_in_scene(self, scene_ply_path, scene_obj_kpts):
+        """
+        Function to visualize a set of 3D points in a .PLY scene.
+        """
         vis_mesh_list = []
         scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
         vis_mesh_list.append(scene_cloud)
@@ -67,35 +81,41 @@ class Process:
             keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
             vis_mesh_list.append(keypt_mesh)
         o3d.visualization.draw_geometries(vis_mesh_list)
-    def visualize_object(self, scene_ply_path, scene_obj_kpts):
-        vis_mesh_list = []
-        scene_cloud = o3d.io.read_point_cloud(scene_ply_path)
-        vis_mesh_list.append(scene_cloud)
-        for keypt in scene_obj_kpts.transpose():
-            keypt_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
-            keypt_mesh.translate(keypt[0])
-            keypt_mesh.paint_uniform_color([0.1, 0.1, 0.7])
-            vis_mesh_list.append(keypt_mesh)
-        o3d.visualization.draw_geometries(vis_mesh_list)
+        return
 
-    #final computation step
+    def sparse_model_writer(self, object_model, filename="sparse_model.txt"):
+        """
+        Function to save the generated sparse model in the following format
+        <point x="000000" y="000000" z="000000" name="0"/> in a .txt file.
+        Also writes some meta data.
+        Input arguments:
+        object_model - (Nx3) numpy array holding 3D positions of all keypoints
+                       where N is the number of keypoints on the model.
+        filename     - name of the output file inside the output directory.
+                       (sparse_model.txt by default)
+        """
+        out_str = []
+        out_str.append(str("<SparseObjectPoints>"))
+        for idx, point in enumerate(object_model):
+            kpt_str = str("\t<point x=\"{}\" y=\"{}\" z=\"{}\" name=\"{}\"/>".format(point[0], point[1], point[2], idx))
+            out_str.append(kpt_str)
+        out_str.append(str("</SparseObjectPoints>"))
+        with open(os.path.join(self.output_dir, filename), 'w') as out_file:
+            out_file.write("\n".join(out_str))
+        return
+
     def compute(self):
-
+        """
+        Function to compute the sparse model and the relative scene transformations
+        through optimization.
+        Returns a success boolean.
+        """
         #populate selection matrix from select_vec
-        #TODO: this is ugly
         total_kpt_count  = len(self.select_vec)
         found_kpt_count  = len(np.nonzero(self.select_vec)[0])
         selection_matrix = np.zeros((found_kpt_count*3, total_kpt_count*3))
-        row = 0
-        for idx, flag in enumerate(self.select_vec):
-            if flag:
-                selection_matrix[row:row+3, (idx*3):(idx*3)+3] = np.eye(3)
-                row+=3
-
-        #just FYI
-        #print("Total number of keypts: ", total_kpt_count)
-        #print("Keypts localized in 3D: ", found_kpt_count)
-        #print("Size of selection matrix: ", selection_matrix.shape)
+        for idx, nz_idx in enumerate(np.nonzero(self.select_vec)[0]):
+            selection_matrix[(idx*3):(idx*3)+3, (nz_idx*3):(nz_idx*3)+3] = np.eye(3)
 
         #initialize quaternions and translations for each scene
         scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
@@ -105,35 +125,22 @@ class Process:
         #main optimization step
         res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
-        # save the input and the output from optimization step
+        #save the input and the output from optimization step
         out_fn = os.path.join(self.output_dir, 'saved_opt_output')
         np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
 
-        #output from optimization
+        #extract generated sparse object model optimization output
         len_ts = scene_t_ini[1:].size
         len_qs = scene_q_ini[1:].size
-        len_Ps = scene_P_ini.size
-        output_vec = res.x
-        out_ts = output_vec[:len_ts].reshape(scene_t_ini[1:, :].shape)
-        out_qs = output_vec[len_ts:len_ts+len_qs].reshape(scene_q_ini[1:, :].shape)
-        out_Ps = output_vec[len_ts+len_qs:].reshape(scene_P_ini.shape)
-        object_model = out_Ps.transpose()
+        object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
+        object_model = object_model.transpose().squeeze()
 
         # save the generated sparse object model
-        out_file = os.path.join(self.output_dir, "sparse_model.txt")
-        np.savetxt(out_file, out_Ps.squeeze())
+        self.sparse_model_writer(object_model)
 
         if res.success:
-            np.set_printoptions(threshold=sys.maxsize, linewidth=700)
-            np.set_printoptions(precision=5, suppress=True)
             print("--------\n--------\n--------")
             print("SUCCESS")
-            #print("Output translations:\n", out_ts)
-            #print("Output quaternions:\n", out_qs)
-            #print("Object Model:\n", object_model, object_model.shape)
             print("--------\n--------\n--------")
 
-        #visualize the generated object model in first scene
-        self.visualize_object(self.scene_plys[0], object_model)
-        return res.success
-
+        return res.success, object_model

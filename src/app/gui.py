@@ -13,6 +13,7 @@ class GUI:
         self.output_dir = output_dir
         self.num_keypoints = num_keypoints
 
+        #get the list of scene directories
         list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
         list_of_scene_dirs.sort()
         print("Number of scenes: ", len(list_of_scene_dirs))
@@ -20,6 +21,7 @@ class GUI:
         self.scene_dir_itr = iter(list_of_scene_dirs)
         self.cur_scene_dir = next(self.scene_dir_itr)
 
+        #set up the Process object
         self.process = Process(dataset_path, output_dir, scale)
         self.clicked_pixel = []
         self.scene_kpts_2d = []
@@ -195,18 +197,32 @@ class GUI:
         self.scene_btn.configure(state=tk.DISABLED)
         self.compute_btn.configure(state=tk.NORMAL)
         self.display_btn.configure(state=tk.NORMAL)
-        self.process.convert_2Dto3D()
+        #2D-to-3D conversion
+        self.process.convert_2d_to_3d()
         print("Flags: ", self.process.select_vec[-self.num_keypoints:])
 
     def btn_func_compute(self):
-        self.process.convert_2Dto3D()
+        #2D-to-3D conversion
+        self.process.convert_2d_to_3d()
+        #transform points to origins of respective scene
         self.process.transform_points()
-        res = self.process.compute()
+        #final computation step
+        res, obj = self.process.compute()
+        #visualize the generated object model in first scene
+        self.process.visualize_points_in_scene(self.process.scene_plys[0], obj)
 
     def btn_func_display(self):
-        self.process.convert_2Dto3D()
+        """
+        Function to convert the labeled 2D keypoitns into 3D positions
+        and visualize them in the scene.
+        """
+        #2D-to-3D conversion
+        self.process.convert_2d_to_3d()
+        #transform points to origins of respective scene
         self.process.transform_points()
-        self.process.visualize_scene(self.current_mesh, self.process.scene_kpts[-1][np.newaxis,:])
+        #visualize the labeled keypoints in scene
+        self.process.visualize_points_in_scene(self.current_mesh, self.process.scene_kpts[-1][np.newaxis,:])
+        return
 
     def btn_func_quit(self):
         self.tkroot.destroy()
