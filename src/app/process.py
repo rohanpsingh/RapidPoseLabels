@@ -105,21 +105,12 @@ class Process:
             out_file.write("\n".join(out_str))
         return
 
-    def compute(self, procrustes=False):
+    def compute(self, procrustes=True):
         """
         Function to compute the sparse model and the relative scene transformations
         through optimization.
         Returns a success boolean.
         """
-        if True:
-            res = app.geo_constrain.predict(self.sparse_model_file, self.scene_kpts, self.select_vec)
-
-            #save the input and the output from optimization step
-            out_fn = os.path.join(self.output_dir, 'saved_opt_output')
-            np.savez(out_fn, res=res, ref=self.scene_kpts, sm=selection_matrix)
-
-            return True, res
-        
         #populate selection matrix from select_vec
         total_kpt_count  = len(self.select_vec)
         found_kpt_count  = len(np.nonzero(self.select_vec)[0])
@@ -127,30 +118,41 @@ class Process:
         for idx, nz_idx in enumerate(np.nonzero(self.select_vec)[0]):
             selection_matrix[(idx*3):(idx*3)+3, (nz_idx*3):(nz_idx*3)+3] = np.eye(3)
 
-        #initialize quaternions and translations for each scene
-        scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
-        scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
-        scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
+        computed_vector = []
+        success_flag = False
+        if procrustes:
+            success_flag, res = app.geo_constrain.predict(self.sparse_model_file, self.scene_kpts, self.select_vec)
+            computed_vector = res
+        else:
+            #initialize quaternions and translations for each scene
+            scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
+            scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
+            scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
 
-        #main optimization step
-        res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
+            #main optimization step
+            res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
 
-        #extract generated sparse object model optimization output
-        len_ts = scene_t_ini[1:].size
-        len_qs = scene_q_ini[1:].size
-        object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
-        object_model = object_model.squeeze()
+            #extract generated sparse object model optimization output
+            len_ts = scene_t_ini[1:].size
+            len_qs = scene_q_ini[1:].size
+            object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
+            object_model = object_model.squeeze()
 
-        # save the generated sparse object model
-        self.sparse_model_writer(object_model)
+            #save the generated sparse object model
+            self.sparse_model_writer(object_model)
+            computed_vector = res.x
+            success_flag = res.success
 
         #save the input and the output from optimization step
         out_fn = os.path.join(self.output_dir, 'saved_opt_output')
-        np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
+        np.savez(out_fn, res=computed_vector, ref=self.scene_kpts, sm=selection_matrix)
 
-        if res.success:
+        if success_flag:
             print("--------\n--------\n--------")
-            print("SUCCESS")
+            print("Computed results saved at {}".format(out_fn))
+            print("computed_vector  ---> npz.res")
+            print("scene_kpts       ---> npz.ref")
+            print("selection_matrix ---> npz.sm")
             print("--------\n--------\n--------")
 
         return res.success, object_model

@@ -81,10 +81,4 @@ def predict(model_file, labeled_points, selection_vector):
         poses_vec.append(obj_pose)
     #since object has not moved between scenes...
     output_vec = [poses_vec[0].dot(np.linalg.inv(tf)) for tf in poses_vec]
-    return output_vec
-
-if __name__=='__main__':
-    out = get_object_definition(sys.argv[1])
-    print(out)
-    print(out.shape)
-    
+    return True, output_vec
