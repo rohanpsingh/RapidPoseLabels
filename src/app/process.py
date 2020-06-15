@@ -1,8 +1,10 @@
 import os
 import numpy as np
-import transforms3d as tf
+import transforms3d.quaternions as tfq
 import open3d as o3d
 import app.optimize
+import app.geo_constrain
+from utils.sparse_model import SparseModel
 
 class Process:
     def __init__(self, dataset_path, output_dir, scale):
@@ -21,11 +23,9 @@ class Process:
         self.select_vec = []
         self.scale = scale
         self.output_dir = output_dir
+        self.sparse_model_file = None
 
-        # create output dir if not exists
-        if not os.path.isdir(self.output_dir):
-            os.makedirs(self.output_dir)
-
+        #get camera intrinsics
         self.camera_intrinsics = []
         with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
             self.camera_intrinsics = file.readlines()[0].split()
@@ -63,7 +63,7 @@ class Process:
         for scene_pts, pose in zip(self.pts_in_3d, self.scene_cams):
             pose_t = np.asarray(pose[:3])[:, np.newaxis]
             pose_q = np.asarray([pose[-1]] + pose[3:-1])
-            scene_tf.append(tf.quaternions.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
+            scene_tf.append(tfq.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
         self.scene_kpts = np.asarray(scene_tf)
         return
 
@@ -82,33 +82,16 @@ class Process:
         o3d.visualization.draw_geometries(vis_mesh_list)
         return
 
-    def sparse_model_writer(self, object_model, filename="sparse_model.txt"):
-        """
-        Function to save the generated sparse model in the following format
-        <point x="000000" y="000000" z="000000" name="0"/> in a .txt file.
-        Also writes some meta data.
-        Input arguments:
-        object_model - (Nx3) numpy array holding 3D positions of all keypoints
-                       where N is the number of keypoints on the model.
-        filename     - name of the output file inside the output directory.
-                       (sparse_model.txt by default)
-        """
-        out_str = ["<SparseObjectPoints>"]
-        for idx, point in enumerate(object_model):
-            kpt_str = str("\t<point x=\"{}\" y=\"{}\" z=\"{}\"".format(*list(point)))
-            kpt_str = kpt_str + str(" name=\"{}\"/>".format(idx))
-            out_str.append(kpt_str)
-        out_str.append("</SparseObjectPoints>")
-        with open(os.path.join(self.output_dir, filename), 'w') as out_file:
-            out_file.write("\n".join(out_str))
-        return
-
     def compute(self):
         """
         Function to compute the sparse model and the relative scene transformations
-        through optimization.
+        through optimization. Output directory will be created if not exists.
         Returns a success boolean.
         """
+        # create output dir if not exists
+        if not os.path.isdir(self.output_dir):
+            os.makedirs(self.output_dir)
+
         #populate selection matrix from select_vec
         total_kpt_count  = len(self.select_vec)
         found_kpt_count  = len(np.nonzero(self.select_vec)[0])
@@ -116,30 +99,40 @@ class Process:
         for idx, nz_idx in enumerate(np.nonzero(self.select_vec)[0]):
             selection_matrix[(idx*3):(idx*3)+3, (nz_idx*3):(nz_idx*3)+3] = np.eye(3)
 
-        #initialize quaternions and translations for each scene
-        scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
-        scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
-        scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
+        computed_vector = []
+        success_flag = False
+        if self.sparse_model_file is not None:
+            object_model = SparseModel().reader(self.sparse_model_file)
+            success_flag, res = app.geo_constrain.predict(object_model, self.scene_kpts.transpose(0,2,1), self.select_vec)
+            scene_t = np.asarray([np.array(i[:3,3]) for i in res])
+            scene_q = np.asarray([tfq.mat2quat(np.array(i[:3,:3])) for i in res])
+            computed_vector = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten()))
+        else:
+            #initialize quaternions and translations for each scene
+            scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
+            scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
+            scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
 
-        #main optimization step
-        res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
+            #main optimization step
+            res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
+
+            #extract generated sparse object model optimization output
+            len_ts = scene_t_ini[1:].size
+            len_qs = scene_q_ini[1:].size
+            object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
+            object_model = object_model.squeeze()
+            #save the generated sparse object model
+            SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"))
+            computed_vector = res.x[:(len_ts+len_qs)]
+            success_flag = res.success
 
         #save the input and the output from optimization step
-        out_fn = os.path.join(self.output_dir, 'saved_opt_output')
-        np.savez(out_fn, res=res.x, ref=self.scene_kpts, sm=selection_matrix)
+        out_fn = os.path.join(self.output_dir, 'saved_meta_data')
+        np.savez(out_fn, model=object_model, scenes=computed_vector, ref=self.scene_kpts, sm=selection_matrix)
 
-        #extract generated sparse object model optimization output
-        len_ts = scene_t_ini[1:].size
-        len_qs = scene_q_ini[1:].size
-        object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
-        object_model = object_model.squeeze()
-
-        # save the generated sparse object model
-        self.sparse_model_writer(object_model)
-
-        if res.success:
+        if success_flag:
             print("--------\n--------\n--------")
-            print("SUCCESS")
+            print("Computed results saved at {}".format(out_fn))
             print("--------\n--------\n--------")
 
-        return res.success, object_model
+        return success_flag, object_model

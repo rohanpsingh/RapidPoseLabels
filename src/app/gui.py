@@ -1,6 +1,7 @@
 import os
 import random
 import tkinter as tk
+from tkinter import filedialog
 import numpy as np
 import PIL.Image, PIL.ImageTk
 import cv2
@@ -193,3 +194,15 @@ class GUI(TkRoot):
         self.process.transform_points()
         #visualize the labeled keypoints in scene
         self.process.visualize_points_in_scene(self.current_ply_path, self.process.scene_kpts[-1].transpose())
+
+    def btn_func_choose(self):
+        file_name = filedialog.askopenfilename(initialdir=".", title="Browse sparse model file",
+                                               filetypes=(("Text files","*.txt"),("all files","*.*")))
+        self.process.sparse_model_file = file_name
+        #display main layout
+        self.main_layout()
+
+    def btn_func_create(self):
+        self.process.sparse_model_file = None
+        #display main layout
+        self.main_layout()
