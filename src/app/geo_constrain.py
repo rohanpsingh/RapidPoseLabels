@@ -3,27 +3,6 @@ import numpy as np
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
 
-def get_object_definition(pp_file, vis_vec):
-    """
-    Parse the sparse model file.
-    Return numpy array of shape (Nx3).
-    """
-    points = []
-    names = []
-    with open(pp_file, 'r') as ppfile:
-        lines = [line.strip().split()[1:] for line in ppfile.readlines() if line.strip().find('point')==1]
-    for line in lines: 
-        dict_ = {name:float(val.strip('"')) for item in line for name,val in [item.strip('/>').split('=')]}
-        points.append([dict_['x'], dict_['y'], dict_['z']])
-        names.append(int(dict_['name']))
-    #keypoints are unique, so they must be sorted according to ID
-    out = np.asarray([points[i] for i,v in zip(np.argsort(names), vis_vec) if v])
-    return out
-        
-def get_object_manual(kpts, vis_vec):
-    out = [kpt for v, kpt in zip(vis_vec, kpts.transpose()) if v]
-    return np.asarray(out)
-
 def procrustes(X, Y, scaling=True, reflection='best'):
     n,m = X.shape
     ny,my = Y.shape
@@ -67,18 +46,22 @@ def procrustes(X, Y, scaling=True, reflection='best'):
     tform = {'rotation':T, 'scale':b, 'translation':c}
     return d, Z, tform
 
-def predict(model_file, labeled_points, selection_vector):
-    num_scenes = labeled_points.shape[0]
-    num_keypts = labeled_points.shape[2]
-    selection_arr = np.asarray(selection_vector).reshape(num_scenes, num_keypts)
+def predict(model_points, labeled_points, selection_vector):
+    selection_arr = np.asarray(selection_vector).reshape(tuple(labeled_points.shape[:2]))
     poses_vec = []
     #get object pose and relative scene transformations using Procrustes analysis
     for point_set, visibility in zip(labeled_points, selection_arr):
-        obj_man = get_object_manual(point_set, visibility)
-        obj_def = get_object_definition(model_file, visibility)
-        _, _, tform = procrustes(obj_def, obj_man, False)
-        obj_pose = tfa.compose(tform['translation'], tform['rotation'], np.ones(3))
-        poses_vec.append(obj_pose)
-    #since object has not moved between scenes...
-    output_vec = [poses_vec[0].dot(np.linalg.inv(tf)) for tf in poses_vec]
-    return True, output_vec
+        manual_points = np.asarray([kpt for flag, kpt in zip(visibility, point_set) if flag])
+        model_points  = np.asarray([kpt for flag, kpt in zip(visibility, model_points) if flag])
+        _, _, tform = procrustes(model_points, manual_points, False)
+        obj_pose = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
+        #obj_pose = tfa.compose(tform['translation'], tform['rotation'], np.ones(3))
+        poses_vec.append(np.linalg.inv(obj_pose))
+
+    print(poses_vec)
+    #obtain relative tfs from object poses
+    #output_vec = [poses_vec[0].dot(np.linalg.inv(tf)) for tf in poses_vec]
+    #output_vec = [np.dot(tf, np.linalg.inv(poses_vec[0])) for tf in poses_vec]
+    #output_vec = [(np.linalg.inv(poses_vec[0])).dot(tf) for tf in poses_vec]
+
+    return True, poses_vec#output_vec

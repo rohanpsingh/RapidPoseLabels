@@ -1,9 +1,10 @@
 import os
 import numpy as np
-import transforms3d as tf
+import transforms3d.quaternions as tfq
 import open3d as o3d
 import app.optimize
 import app.geo_constrain
+from utils.sparse_model import SparseModel
 
 class Process:
     def __init__(self, dataset_path, output_dir, scale):
@@ -22,7 +23,7 @@ class Process:
         self.select_vec = []
         self.scale = scale
         self.output_dir = output_dir
-        self.sparse_model_file = '/home/rohan/rohan_m15x/project_src/iros2020/src/rapid_labels/src/tmp/sparse_model.txt'
+        self.sparse_model_file = '/home/rohan/rohan_m15x/projects/rapidposelabels/src/tmp/sparse_model.txt'
 
         # create output dir if not exists
         if not os.path.isdir(self.output_dir):
@@ -65,7 +66,7 @@ class Process:
         for scene_pts, pose in zip(self.pts_in_3d, self.scene_cams):
             pose_t = np.asarray(pose[:3])[:, np.newaxis]
             pose_q = np.asarray([pose[-1]] + pose[3:-1])
-            scene_tf.append(tf.quaternions.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
+            scene_tf.append(tfq.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
         self.scene_kpts = np.asarray(scene_tf)
         return
 
@@ -84,27 +85,6 @@ class Process:
         o3d.visualization.draw_geometries(vis_mesh_list)
         return
 
-    def sparse_model_writer(self, object_model, filename="sparse_model.txt"):
-        """
-        Function to save the generated sparse model in the following format
-        <point x="000000" y="000000" z="000000" name="0"/> in a .txt file.
-        Also writes some meta data.
-        Input arguments:
-        object_model - (Nx3) numpy array holding 3D positions of all keypoints
-                       where N is the number of keypoints on the model.
-        filename     - name of the output file inside the output directory.
-                       (sparse_model.txt by default)
-        """
-        out_str = ["<SparseObjectPoints>"]
-        for idx, point in enumerate(object_model):
-            kpt_str = str("\t<point x=\"{}\" y=\"{}\" z=\"{}\"".format(*list(point)))
-            kpt_str = kpt_str + str(" name=\"{}\"/>".format(idx))
-            out_str.append(kpt_str)
-        out_str.append("</SparseObjectPoints>")
-        with open(os.path.join(self.output_dir, filename), 'w') as out_file:
-            out_file.write("\n".join(out_str))
-        return
-
     def compute(self, procrustes=True):
         """
         Function to compute the sparse model and the relative scene transformations
@@ -121,8 +101,11 @@ class Process:
         computed_vector = []
         success_flag = False
         if procrustes:
-            success_flag, res = app.geo_constrain.predict(self.sparse_model_file, self.scene_kpts, self.select_vec)
-            computed_vector = res
+            object_model = SparseModel().reader(self.sparse_model_file)
+            success_flag, res = app.geo_constrain.predict(object_model, self.scene_kpts.transpose(0,2,1), self.select_vec)
+            scene_t = np.asarray([np.array(i[:3,3]) for i in res])
+            scene_q = np.asarray([tfq.mat2quat(np.array(i[:3,:3])) for i in res])
+            computed_vector = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten()))
         else:
             #initialize quaternions and translations for each scene
             scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
@@ -139,7 +122,7 @@ class Process:
             object_model = object_model.squeeze()
 
             #save the generated sparse object model
-            self.sparse_model_writer(object_model)
+            SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"))
             computed_vector = res.x
             success_flag = res.success
 
@@ -155,4 +138,4 @@ class Process:
             print("selection_matrix ---> npz.sm")
             print("--------\n--------\n--------")
 
-        return res.success, object_model
+        return success_flag, object_model
