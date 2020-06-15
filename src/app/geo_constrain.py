@@ -55,13 +55,5 @@ def predict(model_points, labeled_points, selection_vector):
         model_points  = np.asarray([kpt for flag, kpt in zip(visibility, model_points) if flag])
         _, _, tform = procrustes(model_points, manual_points, False)
         obj_pose = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
-        #obj_pose = tfa.compose(tform['translation'], tform['rotation'], np.ones(3))
         poses_vec.append(np.linalg.inv(obj_pose))
-
-    print(poses_vec)
-    #obtain relative tfs from object poses
-    #output_vec = [poses_vec[0].dot(np.linalg.inv(tf)) for tf in poses_vec]
-    #output_vec = [np.dot(tf, np.linalg.inv(poses_vec[0])) for tf in poses_vec]
-    #output_vec = [(np.linalg.inv(poses_vec[0])).dot(tf) for tf in poses_vec]
-
-    return True, poses_vec#output_vec
+    return True, poses_vec
