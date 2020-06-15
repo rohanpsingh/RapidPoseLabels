@@ -16,7 +16,7 @@ class TkRoot:
         self.display_image = []
 
         #layout
-        self.layout()
+        self.init_layout()
 
     def tkroot_main_loop(self):
         self.tkroot.mainloop()
@@ -39,10 +39,20 @@ class TkRoot:
     def btn_func_display(self):
         pass
 
+    def btn_func_create(self):
+        pass
+
+    def btn_func_choose(self):
+        pass
+
     def btn_func_quit(self):
         self.tkroot.destroy()
 
-    def layout(self):
+    def main_layout(self):
+        #destroy previous buttons
+        self.create_btn.destroy()
+        self.choose_btn.destroy()
+
         # Button definitions and placements
         self.load_btn = tk.Button(self.tkroot, text="Load New Image",
                                   height=self.widget_ht, width=self.widget_wd,
@@ -96,3 +106,17 @@ class TkRoot:
         self.canvas = tk.Canvas(self.tkroot, width = self.width, height = self.height)
         self.canvas.grid(column=0, row=0, rowspan=10, padx=10, pady=10)
         self.canvas.create_rectangle(0, 0, self.width, self.height, fill='blue')
+
+    def init_layout(self):
+        #button for building a new model
+        self.create_btn = tk.Button(self.tkroot, text="Create a new model",
+                                    height=self.widget_ht, width=self.widget_wd,
+                                    state=tk.NORMAL,
+                                    command=self.btn_func_create)
+        #button for choosing an existing model file
+        self.choose_btn = tk.Button(self.tkroot, text="Browse a model",
+                                    height=self.widget_ht, width=self.widget_wd,
+                                    state=tk.NORMAL,
+                                    command=self.btn_func_choose)
+        self.create_btn.place(x=350, y=200, height=50, width=200)
+        self.choose_btn.place(x=350, y=270, height=50, width=200)

@@ -23,7 +23,7 @@ class Process:
         self.select_vec = []
         self.scale = scale
         self.output_dir = output_dir
-        self.sparse_model_file = '/home/rohan/rohan_m15x/projects/rapidposelabels/src/tmp/sparse_model.txt'
+        self.sparse_model_file = None
 
         # create output dir if not exists
         if not os.path.isdir(self.output_dir):
@@ -85,7 +85,7 @@ class Process:
         o3d.visualization.draw_geometries(vis_mesh_list)
         return
 
-    def compute(self, procrustes=True):
+    def compute(self):
         """
         Function to compute the sparse model and the relative scene transformations
         through optimization.
@@ -100,7 +100,7 @@ class Process:
 
         computed_vector = []
         success_flag = False
-        if procrustes:
+        if self.sparse_model_file is not None:
             object_model = SparseModel().reader(self.sparse_model_file)
             success_flag, res = app.geo_constrain.predict(object_model, self.scene_kpts.transpose(0,2,1), self.select_vec)
             scene_t = np.asarray([np.array(i[:3,3]) for i in res])
