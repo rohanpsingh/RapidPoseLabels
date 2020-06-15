@@ -200,7 +200,8 @@ class GUI(TkRoot):
                                                filetypes=(("Text files","*.txt"),("all files","*.*")))
         self.process.sparse_model_file = file_name
         #display main layout
-        self.main_layout()
+        if file_name:
+            self.main_layout()
 
     def btn_func_create(self):
         self.process.sparse_model_file = None
