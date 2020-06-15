@@ -56,4 +56,4 @@ def predict(model_points, labeled_points, selection_vector):
         _, _, tform = procrustes(model_set, manual_set, False)
         obj_pose = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
         poses_vec.append(np.linalg.inv(obj_pose))
-    return True, poses_vec
+    return (len(poses_vec)!=0), poses_vec

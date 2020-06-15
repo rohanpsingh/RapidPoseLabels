@@ -25,10 +25,7 @@ class Process:
         self.output_dir = output_dir
         self.sparse_model_file = None
 
-        # create output dir if not exists
-        if not os.path.isdir(self.output_dir):
-            os.makedirs(self.output_dir)
-
+        #get camera intrinsics
         self.camera_intrinsics = []
         with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
             self.camera_intrinsics = file.readlines()[0].split()
@@ -88,9 +85,13 @@ class Process:
     def compute(self):
         """
         Function to compute the sparse model and the relative scene transformations
-        through optimization.
+        through optimization. Output directory will be created if not exists.
         Returns a success boolean.
         """
+        # create output dir if not exists
+        if not os.path.isdir(self.output_dir):
+            os.makedirs(self.output_dir)
+
         #populate selection matrix from select_vec
         total_kpt_count  = len(self.select_vec)
         found_kpt_count  = len(np.nonzero(self.select_vec)[0])
@@ -120,15 +121,14 @@ class Process:
             len_qs = scene_q_ini[1:].size
             object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
             object_model = object_model.squeeze()
-
             #save the generated sparse object model
             SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"))
             computed_vector = res.x[:(len_ts+len_qs)]
             success_flag = res.success
 
         #save the input and the output from optimization step
-        out_fn = os.path.join(self.output_dir, 'saved_opt_output')
-        np.savez(out_fn, res=computed_vector, ref=self.scene_kpts, sm=selection_matrix)
+        out_fn = os.path.join(self.output_dir, 'saved_meta_data')
+        np.savez(out_fn, model=object_model, scenes=computed_vector, ref=self.scene_kpts, sm=selection_matrix)
 
         if success_flag:
             print("--------\n--------\n--------")
