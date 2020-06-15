@@ -133,9 +133,6 @@ class Process:
         if success_flag:
             print("--------\n--------\n--------")
             print("Computed results saved at {}".format(out_fn))
-            print("computed_vector  ---> npz.res")
-            print("scene_kpts       ---> npz.ref")
-            print("selection_matrix ---> npz.sm")
             print("--------\n--------\n--------")
 
         return success_flag, object_model
