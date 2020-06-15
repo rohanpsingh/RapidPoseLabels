@@ -47,13 +47,13 @@ def procrustes(X, Y, scaling=True, reflection='best'):
     return d, Z, tform
 
 def predict(model_points, labeled_points, selection_vector):
-    selection_arr = np.asarray(selection_vector).reshape(tuple(labeled_points.shape[:2]))
+    selection_arr = np.asarray(selection_vector).reshape(labeled_points.shape[:2])
     poses_vec = []
     #get object pose and relative scene transformations using Procrustes analysis
     for point_set, visibility in zip(labeled_points, selection_arr):
-        manual_points = np.asarray([kpt for flag, kpt in zip(visibility, point_set) if flag])
-        model_points  = np.asarray([kpt for flag, kpt in zip(visibility, model_points) if flag])
-        _, _, tform = procrustes(model_points, manual_points, False)
+        manual_set = np.asarray([kpt for flag, kpt in zip(visibility, point_set) if flag])
+        model_set  = np.asarray([kpt for flag, kpt in zip(visibility, model_points) if flag])
+        _, _, tform = procrustes(model_set, manual_set, False)
         obj_pose = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
         poses_vec.append(np.linalg.inv(obj_pose))
     return True, poses_vec
