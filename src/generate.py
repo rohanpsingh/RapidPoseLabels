@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
+from utils.sparse_model import SparseModel
 
 class DatasetWriter:
     def __init__(self, output_dir):
@@ -55,7 +56,7 @@ class DatasetWriter:
 
 
 class Annotations:
-    def __init__(self, dataset_path, input_arr_path, visualize=False):
+    def __init__(self, dataset_path, input_arr_path, input_model_path, visualize=False):
         """
         Constructor for Annotations class.
         Input arguments:
@@ -66,6 +67,7 @@ class Annotations:
         self.dataset_path = dataset_path
         self.input_array  = np.load(input_arr_path)
         self.visualize    = visualize
+        self.model_path   = input_model_path
 
         #read camera intrinsics matrix from camera.txt in root directory
         self.cam_mat = np.eye(3)
@@ -167,7 +169,7 @@ class Annotations:
         self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_tfs))
 
         #get object model from input_array
-        self.object_model  = self.input_array['res'][(self.num_scenes-1)*7 : ].reshape((self.num_keypts, 3))
+        self.object_model = SparseModel().reader(self.model_path)
         return
 
     def generate_labels(self):
@@ -199,6 +201,7 @@ class Annotations:
                 cam_t = tfa.compose(np.asarray(cam_pose[:3]), tfq.quat2mat(np.asarray([cam_pose[-1]] + cam_pose[3:-1])), np.ones(3))
                 #get 2D positions of keypoints, centers and scale of bounding box
                 label = self.project_points(self.object_model, np.dot(np.linalg.inv(cam_t), sce_t))
+                #label = self.project_points(self.object_model, np.dot(np.linalg.inv(sce_t), cam_t))
                 samples.append((input_rgb_image, label))
 
                 #visualize if required
@@ -214,12 +217,13 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", required=True, help='path to root dir of raw dataset')
     ap.add_argument("--input", required=True, help='path to input .npz zipped archive')
+    ap.add_argument("--model", required=True, help='path to input sparse model file')
     ap.add_argument("--output", required=True, help='path to output directory')
     ap.add_argument("--visualize", action='store_true', help='to visualize each label')
     opt = ap.parse_args()
 
     #set up Annotations
-    label_generator = Annotations(opt.dataset, opt.input, opt.visualize)
+    label_generator = Annotations(opt.dataset, opt.input, opt.model, opt.visualize)
     #extract useful information from input array
     label_generator.process_input()
     #generate labels and writes to output directory
