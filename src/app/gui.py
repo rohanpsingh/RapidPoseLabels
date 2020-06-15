@@ -203,6 +203,6 @@ class GUI(TkRoot):
         self.main_layout()
 
     def btn_func_create(self):
-        self.process.sparse_model_file = file_name
+        self.process.sparse_model_file = None
         #display main layout
         self.main_layout()
