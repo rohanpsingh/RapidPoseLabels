@@ -30,6 +30,8 @@ class SparseModel:
        through MeshLab using the PickPoints too.)
        Return numpy array of shape (Nx3).
        """
+       if not os.path.exists(file_path):
+           raise Exception('File path %s does not exists' % file_path)
        points = []
        names = []
        with open(file_path, 'r') as in_file:

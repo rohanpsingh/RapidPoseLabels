@@ -12,6 +12,7 @@ class Annotations:
         Input arguments:
         dataset_path   - path to root dataset directory
         input_arr_path - path to input npz zipped archive
+        input_model_path - path to sparse model file
         visualize      - set 'True' to visualize
         """
         self.dataset_path = dataset_path
@@ -113,8 +114,8 @@ class Annotations:
         and the relative scene transformations.
         """
         #get the relative scene transforamtions from input array
-        out_ts  = self.input_array['res'][ :(self.num_scenes-1)*3].reshape((self.num_scenes-1, 3))
-        out_qs  = self.input_array['res'][(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
+        out_ts  = self.input_array['scenes'][ :(self.num_scenes-1)*3].reshape((self.num_scenes-1, 3))
+        out_qs  = self.input_array['scenes'][(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
         out_tfs = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
         self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_tfs))
 

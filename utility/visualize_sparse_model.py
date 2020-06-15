@@ -16,11 +16,11 @@ def visualize(npz_file, dataset_path):
     list_of_scene_dirs.sort()
 
     #get scene transforamtions from input array
-    out_ts = input_array['res'][:(num_scenes-1)*3].reshape((num_scenes-1, 3))
-    out_qs = input_array['res'][(num_scenes-1)*3 : (num_scenes-1)*7].reshape((num_scenes-1, 4))
+    out_ts = input_array['scenes'][:(num_scenes-1)*3].reshape((num_scenes-1, 3))
+    out_qs = input_array['scenes'][(num_scenes-1)*3 : (num_scenes-1)*7].reshape((num_scenes-1, 4))
     out_Ts = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
     #get object model from input_array
-    out_Ps = input_array['res'][(num_scenes-1)*7 : ].reshape((num_keypts, 3))
+    out_Ps = input_array['model'].reshape((num_keypts, 3))
 
     #this is the object mode
     object_model = out_Ps

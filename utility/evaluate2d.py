@@ -6,23 +6,29 @@ import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
 import cv2
 import evaluate3d
-from src.generate import Annotations
+from utils.annotations import Annotations
 
 np.set_printoptions(threshold=sys.maxsize, linewidth=700)
 np.set_printoptions(precision=4, suppress=True)
 
 
 class Evaluate(Annotations):
-    def __init__(self, dataset_path, input_arr_path, picked_pts, visualize):
+    """
+    Class to evaluate accuracy of generated 2D keypoint labels
+    if a ground truth sparse model is available, and information
+    of relative scene transformations is available.
+    """
+    def __init__(self, dataset_path, input_arr_path, input_model_path, picked_pts, visualize):
         """
         Constructor for Evaluate class.
         Input arguments:
         dataset_path   - path to root dataset directory
         input_arr_path - path to input npz zipped archive
+        input_model_path - path to sparse model file
         picekd_pts     - path to *.pp file for true object keypoints
         visualize      - set 'True' to visualize
         """
-        super().__init__(dataset_path, input_arr_path, False)
+        super().__init__(dataset_path, input_arr_path, input_model_path, False)
         self.picked_pts = picked_pts
         self.visualize = visualize
 
@@ -114,12 +120,13 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", required=True, help='path to root dir of raw dataset')
     ap.add_argument("--input", required=True, help='path to input .npz zipped archive')
+    ap.add_argument("--model", required=True, help='path to input sparse model file')
     ap.add_argument("--points", required=True, help='path to *.pp file for true sparse model')
     ap.add_argument("--visualize", action='store_true', help='to visualize each label')
     opt = ap.parse_args()
 
     #generate annotations and obtain errors
-    evaluator = Evaluate(opt.dataset, opt.input, opt.points, opt.visualize)
+    evaluator = Evaluate(opt.dataset, opt.input, opt.model, opt.points, opt.visualize)
     evaluator.process_input()
     error_vec = evaluator.get_pixel_errors()
 
