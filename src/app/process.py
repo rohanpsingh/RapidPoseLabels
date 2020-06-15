@@ -123,7 +123,7 @@ class Process:
 
             #save the generated sparse object model
             SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"))
-            computed_vector = res.x
+            computed_vector = res.x[:(len_ts+len_qs)]
             success_flag = res.success
 
         #save the input and the output from optimization step
