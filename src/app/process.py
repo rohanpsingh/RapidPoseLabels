@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import transforms3d.affines as tfa
 import transforms3d.quaternions as tfq
 import open3d as o3d
 import app.optimize
@@ -82,7 +83,7 @@ class Process:
         o3d.visualization.draw_geometries(vis_mesh_list)
         return
 
-    def compute(self):
+    def compute(self, sparse_model_flag=False):
         """
         Function to compute the sparse model and the relative scene transformations
         through optimization. Output directory will be created if not exists.
@@ -101,7 +102,7 @@ class Process:
 
         computed_vector = []
         success_flag = False
-        if self.sparse_model_file is not None:
+        if sparse_model_flag:
             object_model = SparseModel().reader(self.sparse_model_file)
             success_flag, res = app.geo_constrain.predict(object_model, self.scene_kpts.transpose(0,2,1), self.select_vec)
             scene_t = np.asarray([np.array(i[:3,3]) for i in res])
@@ -136,3 +137,55 @@ class Process:
             print("--------\n--------\n--------")
 
         return success_flag, object_model
+
+    def define_grasp_point(self, ply_path):
+        """
+        Function to define grasp pose.
+        """
+        # create output dir if not exists
+        if not os.path.isdir(self.output_dir):
+            os.makedirs(self.output_dir)
+
+        if (self.scene_kpts.shape)!=(1,3,2):
+            raise Exception("2 3D points must exist to define a grasp pose." )
+        if not os.path.exists(ply_path):
+            raise Exception("%s path does not exist" % ply_path)
+        #get 3 user-defined 3D points
+        point_1 = self.scene_kpts.transpose(0, 2, 1)[0, 0]
+        point_2 = self.scene_kpts.transpose(0, 2, 1)[0, 1]
+        #read point cloud and get normals
+        scene_cloud = o3d.io.read_point_cloud(ply_path)
+        scene_cloud.estimate_normals()
+        scene_cloud.normalize_normals()
+        scene_points  = scene_cloud.points
+        scene_normals = scene_cloud.normals
+        scene_tree  = o3d.geometry.KDTreeFlann(scene_cloud)
+        #get neightbors and find normal direction
+        [_, idx, _] = scene_tree.search_knn_vector_3d(point_1, 200)
+        normals = np.asarray(scene_normals)[list(idx)]
+        normal_dir = normals.mean(0)
+        normal_dir = normal_dir/np.linalg.norm(normal_dir)
+        #get intersection of point and plane
+        # d = (a.x_0 + b.y_0 + c.z_0)/(a.x_u + b.y_u + c.z_u)
+        lamda = np.dot(normal_dir, point_1)/np.dot(normal_dir, point_2)
+        point_i  = lamda*point_2
+        vector_x = (point_i - point_1)
+        vector_y = np.cross(normal_dir, vector_x)
+        #normalize
+        vector_x = vector_x/np.linalg.norm(vector_x)
+        vector_y = vector_y/np.linalg.norm(vector_y)
+        #create rotation matrix
+        rot_mat = np.array([vector_x, vector_y, normal_dir])
+        tf_mat = tfa.compose(point_1, rot_mat, np.ones(3))
+
+        #save the grasp point
+        SparseModel().grasp_writer(tf_mat, os.path.join(self.output_dir, "sparse_model.txt"))
+
+        #visualize in open3d
+        vis_mesh_list = []
+        vis_mesh_list.append(scene_cloud)
+        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(0.2)
+        coordinate_frame.transform(tf_mat)
+        vis_mesh_list.append(coordinate_frame)
+        o3d.visualization.draw_geometries(vis_mesh_list)
+        return True, tf_mat
