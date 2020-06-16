@@ -45,6 +45,9 @@ class TkRoot:
     def btn_func_choose(self):
         pass
 
+    def btn_func_grasping(self):
+        pass
+
     def btn_func_quit(self):
         self.tkroot.destroy()
 
@@ -114,9 +117,15 @@ class TkRoot:
                                     state=tk.NORMAL,
                                     command=self.btn_func_create)
         #button for choosing an existing model file
-        self.choose_btn = tk.Button(self.tkroot, text="Browse a model",
+        self.choose_btn = tk.Button(self.tkroot, text="Use existing model",
                                     height=self.widget_ht, width=self.widget_wd,
                                     state=tk.NORMAL,
                                     command=self.btn_func_choose)
-        self.create_btn.place(x=350, y=200, height=50, width=200)
-        self.choose_btn.place(x=350, y=270, height=50, width=200)
+        #button for defining a grasping point
+        self.grasping_btn = tk.Button(self.tkroot, text="Define grasp point",
+                                      height=self.widget_ht, width=self.widget_wd,
+                                      state=tk.NORMAL,
+                                      command=self.btn_func_grasping)
+        self.create_btn.place(x=350, y=150, height=50, width=200)
+        self.choose_btn.place(x=350, y=220, height=50, width=200)
+        self.grasping_btn.place(x=350, y=290, height=50, width=200)

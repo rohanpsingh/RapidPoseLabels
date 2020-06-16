@@ -56,6 +56,11 @@ class GUI(TkRoot):
         super().__init__(window_title, self.width, self.height)
         super().tkroot_main_loop()
 
+        #GUI mode flags
+        self.build_model_mode  = False
+        self.model_exist_mode  = False
+        self.define_grasp_mode = False
+
     def display_cv_image(self, img):
         self.display_image = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
         self.canvas.create_image(0, 0, image=self.display_image, anchor=tk.NW)
@@ -172,16 +177,21 @@ class GUI(TkRoot):
 
     def btn_func_compute(self):
         """
-        Function to perform the optimization step.
+        Function to perform the optimization/procrustes step.
         """
         #2D-to-3D conversion
         self.process.convert_2d_to_3d()
         #transform points to origins of respective scene
         self.process.transform_points()
         #final computation step
-        res, obj = self.process.compute()
-        #visualize the generated object model in first scene
-        self.process.visualize_points_in_scene(self.scene_ply_paths[0], obj)
+        if self.build_model_mode:
+            res, obj = self.process.compute(False)
+            #visualize the generated object model in first scene
+            self.process.visualize_points_in_scene(self.scene_ply_paths[0], obj)
+        elif self.model_exist_mode:
+            res, obj = self.process.compute(True)
+        elif self.define_grasp_mode:
+            res, obj = self.process.define_grasp_point(self.scene_ply_paths[0])
 
     def btn_func_display(self):
         """
@@ -196,6 +206,13 @@ class GUI(TkRoot):
         self.process.visualize_points_in_scene(self.current_ply_path, self.process.scene_kpts[-1].transpose())
 
     def btn_func_choose(self):
+        #set GUI mode
+        self.build_model_mode  = False
+        self.model_exist_mode  = True
+        self.define_grasp_mode = False
+        if self.num_keypoints<4:
+            raise Exception("Number of keypoints is %d (should be >=4)" % self.num_keypoints)
+        #browse sparse model file
         file_name = filedialog.askopenfilename(initialdir=".", title="Browse sparse model file",
                                                filetypes=(("Text files","*.txt"),("all files","*.*")))
         self.process.sparse_model_file = file_name
@@ -204,6 +221,27 @@ class GUI(TkRoot):
             self.main_layout()
 
     def btn_func_create(self):
-        self.process.sparse_model_file = None
+        #set GUI mode
+        self.build_model_mode  = True
+        self.model_exist_mode  = False
+        self.define_grasp_mode = False
+        if self.num_keypoints<4:
+            raise Exception("Number of keypoints is %d (should be >=4)" % self.num_keypoints)
         #display main layout
         self.main_layout()
+
+    def btn_func_grasping(self):
+        #set GUI mode
+        self.build_model_mode  = False
+        self.model_exist_mode  = False
+        self.define_grasp_mode = True
+        #browse sparse model file
+        file_name = filedialog.askopenfilename(initialdir=".", title="Browse sparse model file",
+                                               filetypes=(("Text files","*.txt"),("all files","*.*")))
+        self.process.sparse_model_file = file_name
+        #display main layout
+        if file_name:
+            self.num_keypoints = 2
+            self.main_layout()
+            self.skip_btn.configure(state=tk.DISABLED)
+            self.scene_btn.configure(state=tk.DISABLED)
