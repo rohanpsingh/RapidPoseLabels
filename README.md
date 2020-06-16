@@ -11,7 +11,8 @@ This is a tool for rapid generation of labeled training dataset primarily for th
 We provide a very (arguably) user-friendly GUI to fetch minimal user input (where minimal = **few** clicks on **one** image per **scene**). Using the given software, we have been able to generate large, accurately--labeled, training datasets consisting of multiple objects in different scenes (environments with varying background conditions, illuminations, clutter etc.) using just a handheld RGB-D sensor in only a few hours, including the time involved in capturing the raw dataset. And ultimately, used the training dataset for training a bounding-box detector ([YOLOv3](https://github.com/AlexeyAB/darknet)) and a keypoint detector network ([ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer)).
 
 The code in this repository forms Part-1 of the full software:
-![pose-estimation-github](https://user-images.githubusercontent.com/16384313/84725103-d29a4d80-afc4-11ea-9222-a5d7d5de1ef2.png)
+![pose-estimation-github](https://user-images.githubusercontent.com/16384313/84745705-ec04bf00-afef-11ea-9966-c88f24c9a3ba.png)
+
 Links to other parts:
 - Part-2: [ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer)
 - Part-3: Not-yet-available
