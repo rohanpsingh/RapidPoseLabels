@@ -49,7 +49,7 @@ class GUI(TkRoot):
 
         #member variables
         self.scene_ply_paths = []
-        self.scene_kpts_2d = []
+        self.scene_gui_input = []
         self.clicked_pixel = []
         self.image_loaded=False
         self.current_display = []
@@ -71,16 +71,17 @@ class GUI(TkRoot):
         self.display_image = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
         self.canvas.create_image(0, 0, image=self.display_image, anchor=tk.NW)
 
-    def add_kp_to_list(self, kp):
-        if len(self.scene_kpts_2d)==self.num_keypoints:
+    def add_kp_to_list(self, keypoint_pixel):
+        if len(self.scene_gui_input)==self.num_keypoints:
             self.msg_box.configure(text = "all keypoints selected")
             return
-        if kp==[]: kp = [-1, -1]
-        cv2.circle(self.current_display, tuple(kp), 5, (0,0,255), -1)
+        if keypoint_pixel==[]: keypoint_pixel = [-1, -1]
+        cv2.circle(self.current_display, tuple(keypoint_pixel), 5, (0,0,255), -1)
         self.display_cv_image(self.current_display)
-        self.scene_kpts_2d.append(kp)
-        self.msg_box.configure(text = "Keypoint added:\n{}".format(kp))
-        self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+        self.scene_gui_input.append((keypoint_pixel, self.current_dep_image, self.current_cam_pos))
+        list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
+        self.msg_box.configure(text = "Keypoint added:\n{}".format(keypoint_pixel))
+        self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
         self.clicked_pixel = []
 
     def button_click(self, event):
@@ -107,9 +108,10 @@ class GUI(TkRoot):
         self.display_cv_image(self.current_rgb_image)
         self.current_display = self.current_rgb_image.copy()
         self.clicked_pixel = []
-        self.scene_kpts_2d = []
+        self.scene_gui_input = []
+        list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
         self.msg_box.configure(text = "Scene reset")
-        self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+        self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
 
     def btn_func_load(self, index=0):
         """
@@ -148,22 +150,23 @@ class GUI(TkRoot):
         Function to lock labeled keypoints in current scene
         and move to next scene.
         """
-        while len(self.scene_kpts_2d) != self.num_keypoints:
+        while len(self.scene_gui_input) != self.num_keypoints:
             self.add_kp_to_list([])
 
         #rgb image, depth image and list of 2D keypoints for this scene
-        self.process.scene_imgs.append((self.current_rgb_image, self.current_dep_image, self.scene_kpts_2d))
+        self.process.list_of_scenes.append(self.scene_gui_input)
         #the camera pose for the frame
-        self.process.scene_cams.append(self.current_cam_pos)
+        #self.process.scene_cams.append(self.current_cam_pos)
         #and scene ply
         self.scene_ply_paths.append(self.current_ply_path)
 
         self.clicked_pixel = []
-        self.scene_kpts_2d = []
+        self.scene_gui_input = []
         try:
             self.cur_scene_dir = next(self.scene_dir_itr)
+            list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
             self.msg_box.configure(text = "Moving to scene:\n{}".format(self.cur_scene_dir))
-            self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+            self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
             #read the entire list of image names and camera trajectory for current scene dir
             with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
                 self.img_name_list = file.readlines()

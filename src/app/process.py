@@ -17,7 +17,7 @@ class Process:
         scale          - scale parameter of the RGB-D sensor
                          (1000 for Intel RealSense D435)
         """
-        self.scene_imgs = []
+        self.list_of_scenes = []
         self.scene_cams = []
         self.scene_kpts = []
         self.pts_in_3d  = []
@@ -38,9 +38,9 @@ class Process:
         """
         self.select_vec = []
         pts_3d = []
-        for _, dep, pts in self.scene_imgs:
+        for scene in self.list_of_scenes:
             w = []
-            for pt in pts:
+            for (pt, dep, _) in scene:
                 pt3d_z = (dep[pt[1], pt[0]])*(1.0/self.scale)
                 if pt!=[-1, -1] and pt3d_z!=0:
                     pt3d_x = (pt[0] - self.camera_intrinsics[2])*(pt3d_z/self.camera_intrinsics[0])
@@ -61,10 +61,12 @@ class Process:
         Function to transform 3D points to the origins of respective scenes.
         """
         scene_tf = []
-        for scene_pts, pose in zip(self.pts_in_3d, self.scene_cams):
-            pose_t = np.asarray(pose[:3])[:, np.newaxis]
-            pose_q = np.asarray([pose[-1]] + pose[3:-1])
-            scene_tf.append(tfq.quat2mat(pose_q).dot(scene_pts) + pose_t.repeat(scene_pts.shape[1], axis=1))
+        for scene_pts, scene in zip(self.pts_in_3d, self.list_of_scenes):
+            for pt3d, (_, _, pose) in zip(scene_pts.transpose(), scene):
+                pose_t = np.asarray(pose[:3])[:, np.newaxis]
+                pose_q = np.asarray([pose[-1]] + pose[3:-1])
+                pt_tf = tfq.quat2mat(pose_q).dot(pt3d) + pose_t
+                scene_tf.append(pt_tf)
         self.scene_kpts = np.asarray(scene_tf)
         return
 
