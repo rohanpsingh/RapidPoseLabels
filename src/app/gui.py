@@ -52,9 +52,9 @@ class GUI(TkRoot):
         self.scene_kpts_2d = []
         self.clicked_pixel = []
         self.image_loaded=False
-        self.current_rgb_img = []
-        self.input_rgb_image = []
-        self.input_dep_image = []
+        self.current_display = []
+        self.current_rgb_image = []
+        self.current_dep_image = []
         self.current_ply_path = []
         self.current_cam_pos  = []
 
@@ -76,21 +76,21 @@ class GUI(TkRoot):
             self.msg_box.configure(text = "all keypoints selected")
             return
         if kp==[]: kp = [-1, -1]
-        cv2.circle(self.current_rgb_img, tuple(kp), 5, (0,0,255), -1)
-        self.display_cv_image(self.current_rgb_img)
+        cv2.circle(self.current_display, tuple(kp), 5, (0,0,255), -1)
+        self.display_cv_image(self.current_display)
         self.scene_kpts_2d.append(kp)
         self.msg_box.configure(text = "Keypoint added:\n{}".format(kp))
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
         self.clicked_pixel = []
 
     def button_click(self, event):
-        tmp = self.current_rgb_img.copy()
+        tmp = self.current_display.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
 
     def double_button_click(self, event):
-        tmp = self.current_rgb_img.copy()
+        tmp = self.current_display.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
@@ -104,8 +104,8 @@ class GUI(TkRoot):
         Function to reset the current scene.
         All selected keypoints for the current scene will be cleared.
         """
-        self.display_cv_image(self.input_rgb_image)
-        self.current_rgb_img = self.input_rgb_image.copy()
+        self.display_cv_image(self.current_rgb_image)
+        self.current_display = self.current_rgb_image.copy()
         self.clicked_pixel = []
         self.scene_kpts_2d = []
         self.msg_box.configure(text = "Scene reset")
@@ -123,18 +123,18 @@ class GUI(TkRoot):
         read_pair = (self.img_name_list[read_indx]).split()
         dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[1])
         rgb_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[3])
-        self.input_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
-        self.input_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
+        self.current_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
+        self.current_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
         #read the corresponding camera pose from the trajectory
         self.current_cam_pos = self.cam_pose_list[read_indx]
         #and the ply path of the associated scene (required for visualizations)
         self.current_ply_path = os.path.join(self.dataset_path, self.cur_scene_dir, self.cur_scene_dir + '.ply')
 
         #create a copy (to reset and redraw at any time)
-        self.current_rgb_img = self.input_rgb_image.copy()
+        self.current_display = self.current_rgb_image.copy()
 
         #configure state of buttons and canvas
-        self.display_cv_image(self.current_rgb_img)
+        self.display_cv_image(self.current_display)
         self.canvas.bind('<Button-1>', self.button_click)
         self.canvas.bind('<Double-Button-1>', self.double_button_click)
         self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
@@ -152,7 +152,7 @@ class GUI(TkRoot):
             self.add_kp_to_list([])
 
         #rgb image, depth image and list of 2D keypoints for this scene
-        self.process.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
+        self.process.scene_imgs.append((self.current_rgb_image, self.current_dep_image, self.scene_kpts_2d))
         #the camera pose for the frame
         self.process.scene_cams.append(self.current_cam_pos)
         #and scene ply
