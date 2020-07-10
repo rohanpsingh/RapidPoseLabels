@@ -12,10 +12,11 @@ if __name__ == '__main__':
     ap.add_argument("--dataset", required=True, type=str, help='path to root dir of raw dataset')
     ap.add_argument("--output", required=False, type=str, default=datetime, help='path to output dir')
     ap.add_argument("--keypoints", required=False, type=int, default=0, help='number of keypoints to be defined')
+    ap.add_argument("--scale", required=False, type=int, default=1000, help='factor to divide by to get actual depth')
     opt = ap.parse_args()
 
     # run the GUI on input arguments
-    guiobj = app.gui.GUI("Label GUI", opt.dataset, opt.output, opt.keypoints)
+    guiobj = app.gui.GUI("Label GUI", opt.dataset, opt.output, opt.keypoints, opt.scale)
 
     # exit
     sys.exit(0)
