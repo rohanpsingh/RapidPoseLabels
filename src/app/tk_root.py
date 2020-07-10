@@ -85,7 +85,12 @@ class TkRoot:
                                   width=self.widget_wd,
                                   state=tk.NORMAL,
                                   command=self.btn_func_quit)
+        self.load_slider = tk.Scale(self.tkroot, from_=0, to=999,
+                                    orient=tk.HORIZONTAL,
+                                    showvalue=0, length=200,
+                                    command=self.btn_func_load)
         self.load_btn.grid(column=1, row=0, padx=10)
+        self.load_slider.grid(column=1, row=1, padx=10)
         self.skip_btn.grid(column=1, row=2, padx=10)
         self.reset_btn.grid(column=1, row=3, padx=10)
         self.scene_btn.grid(column=1, row=4, padx=10)

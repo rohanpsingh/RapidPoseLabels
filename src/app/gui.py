@@ -38,6 +38,12 @@ class GUI(TkRoot):
         self.scene_dir_itr = iter(list_of_scene_dirs)
         self.cur_scene_dir = next(self.scene_dir_itr)
 
+        #read the entire list of image names and camera trajectory for current scene dir
+        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
+            self.img_name_list = file.readlines()
+        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
+            self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
+
         #set up the Process object
         self.process = Process(dataset_path, output_dir, scale)
 
@@ -105,25 +111,22 @@ class GUI(TkRoot):
         self.msg_box.configure(text = "Scene reset")
         self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
 
-    def btn_func_load(self):
+    def btn_func_load(self, index=0):
         """
-        Function to load a random image from the current scene dir.
+        Function to load an image from the current scene dir.
         """
-        #read the entire list of image names and camera trajectory for current scene dir
-        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
-            img_name_list = file.readlines()
-        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
-            cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
-
-        #read a random RGB and corresponding depth image
-        random_indx = random.randrange(len(img_name_list[:-1]))
-        random_pair = (img_name_list[random_indx]).split()
-        dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, random_pair[1])
-        rgb_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, random_pair[3])
+        if index:
+            read_indx = int(int(index)*(len(self.img_name_list[:-1]))/1000)
+        else:
+            read_indx = random.randrange(len(self.img_name_list[:-1]))
+        #read an RGB and corresponding depth image at the index
+        read_pair = (self.img_name_list[read_indx]).split()
+        dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[1])
+        rgb_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[3])
         self.input_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
         self.input_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
         #read the corresponding camera pose from the trajectory
-        self.current_cam_pos = cam_pose_list[random_indx]
+        self.current_cam_pos = self.cam_pose_list[read_indx]
         #and the ply path of the associated scene (required for visualizations)
         self.current_ply_path = os.path.join(self.dataset_path, self.cur_scene_dir, self.cur_scene_dir + '.ply')
 
@@ -161,6 +164,11 @@ class GUI(TkRoot):
             self.cur_scene_dir = next(self.scene_dir_itr)
             self.msg_box.configure(text = "Moving to scene:\n{}".format(self.cur_scene_dir))
             self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+            #read the entire list of image names and camera trajectory for current scene dir
+            with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
+                self.img_name_list = file.readlines()
+            with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
+                self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
         except:
             self.msg_box.configure(text = "Done all scenes.\nPlease quit")
             self.dat_box.configure(text = "")
