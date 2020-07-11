@@ -20,7 +20,6 @@ class Process:
         self.list_of_scenes = []
         self.scene_cams = []
         self.scene_kpts = []
-        self.pts_in_3d  = []
         self.select_vec = []
         self.scale = scale
         self.output_dir = output_dir
@@ -52,22 +51,18 @@ class Process:
                     self.select_vec.append(0)
                 w.append(pt3d)
             pts_3d.append(w)
-        pts_3d = np.asarray(pts_3d).transpose(0,2,1)
-        self.pts_in_3d = pts_3d
-        return
+        return np.asarray(pts_3d)
 
-    def transform_points(self):
+    def transform_points(self, points_3d):
         """
         Function to transform 3D points to the origins of respective scenes.
         """
-        scene_tf = []
-        for scene_pts, scene in zip(self.pts_in_3d, self.list_of_scenes):
-            for pt3d, (_, _, pose) in zip(scene_pts.transpose(), scene):
-                pose_t = np.asarray(pose[:3])[:, np.newaxis]
-                pose_q = np.asarray([pose[-1]] + pose[3:-1])
-                pt_tf = tfq.quat2mat(pose_q).dot(pt3d) + pose_t
-                scene_tf.append(pt_tf)
-        self.scene_kpts = np.asarray(scene_tf)
+        transformed_points = []
+        for scene_points, scene_meta in zip(points_3d, self.list_of_scenes):
+            scene_poses = [(np.array([pose[-1]] + pose[3:-1]), np.array(pose[:3])) for (_, _, pose) in scene_meta]
+            pt_tf = [tfq.quat2mat(quat).dot(pt3d) + trns for pt3d, (quat, trns) in zip(scene_points, scene_poses)]
+            transformed_points.append(pt_tf)
+        self.scene_kpts = np.asarray(transformed_points).transpose(0, 2, 1)
         return
 
     def visualize_points_in_scene(self, scene_ply_path, scene_obj_kpts):

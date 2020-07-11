@@ -71,13 +71,14 @@ class GUI(TkRoot):
         self.display_image = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
         self.canvas.create_image(0, 0, image=self.display_image, anchor=tk.NW)
 
-    def add_kp_to_list(self, keypoint_pixel):
+    def add_click_to_list(self, keypoint_pixel):
         if len(self.scene_gui_input)==self.num_keypoints:
             self.msg_box.configure(text = "all keypoints selected")
             return
         if keypoint_pixel==[]: keypoint_pixel = [-1, -1]
         cv2.circle(self.current_display, tuple(keypoint_pixel), 5, (0,0,255), -1)
         self.display_cv_image(self.current_display)
+        #add the clicked pixel coords, current depth image and current camera pose to list
         self.scene_gui_input.append((keypoint_pixel, self.current_dep_image, self.current_cam_pos))
         list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
         self.msg_box.configure(text = "Keypoint added:\n{}".format(keypoint_pixel))
@@ -95,10 +96,10 @@ class GUI(TkRoot):
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
-        self.add_kp_to_list(self.clicked_pixel)
+        self.add_click_to_list(self.clicked_pixel)
 
     def btn_func_skip(self):
-        self.add_kp_to_list([])
+        self.add_click_to_list([])
 
     def btn_func_reset(self):
         """
@@ -151,12 +152,10 @@ class GUI(TkRoot):
         and move to next scene.
         """
         while len(self.scene_gui_input) != self.num_keypoints:
-            self.add_kp_to_list([])
+            self.add_click_to_list([])
 
-        #rgb image, depth image and list of 2D keypoints for this scene
+        #keypoint pixel coords, depth images and camera poses for this scene
         self.process.list_of_scenes.append(self.scene_gui_input)
-        #the camera pose for the frame
-        #self.process.scene_cams.append(self.current_cam_pos)
         #and scene ply
         self.scene_ply_paths.append(self.current_ply_path)
 
@@ -191,9 +190,9 @@ class GUI(TkRoot):
         Function to perform the optimization/procrustes step.
         """
         #2D-to-3D conversion
-        self.process.convert_2d_to_3d()
+        keypoint_pos = self.process.convert_2d_to_3d()
         #transform points to origins of respective scene
-        self.process.transform_points()
+        self.process.transform_points(keypoint_pos)
         #final computation step
         if self.build_model_mode:
             res, obj = self.process.compute(False)
@@ -210,9 +209,9 @@ class GUI(TkRoot):
         and visualize them in the scene.
         """
         #2D-to-3D conversion
-        self.process.convert_2d_to_3d()
+        keypoint_pos = self.process.convert_2d_to_3d()
         #transform points to origins of respective scene
-        self.process.transform_points()
+        self.process.transform_points(keypoint_pos)
         #visualize the labeled keypoints in scene
         self.process.visualize_points_in_scene(self.current_ply_path, self.process.scene_kpts[-1].transpose())
 
