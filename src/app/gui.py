@@ -135,6 +135,10 @@ class GUI(TkRoot):
 
         #create a copy (to reset and redraw at any time)
         self.current_display = self.current_rgb_image.copy()
+        #get projection of keypoints on current image
+        matched = self.process.get_projection(self.scene_gui_input, self.current_cam_pos)
+        for keypoint_pixel in matched:
+            cv2.circle(self.current_display, tuple(map(int, keypoint_pixel)), 5, (0,0,255), -1)
 
         #configure state of buttons and canvas
         self.display_cv_image(self.current_display)

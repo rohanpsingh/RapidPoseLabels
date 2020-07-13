@@ -1,4 +1,5 @@
 import os
+import cv2
 import numpy as np
 import transforms3d.affines as tfa
 import transforms3d.quaternions as tfq
@@ -26,10 +27,15 @@ class Process:
         self.sparse_model_file = None
 
         #get camera intrinsics
+        self.camera_matrix = np.eye(3)
         self.camera_intrinsics = []
         with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
             self.camera_intrinsics = file.readlines()[0].split()
             self.camera_intrinsics = list(map(float, self.camera_intrinsics))
+        self.camera_matrix[0,0] = self.camera_intrinsics[0]
+        self.camera_matrix[1,1] = self.camera_intrinsics[1]
+        self.camera_matrix[0,2] = self.camera_intrinsics[2]
+        self.camera_matrix[1,2] = self.camera_intrinsics[3]
 
     def convert_2d_to_3d(self):
         """
@@ -64,6 +70,39 @@ class Process:
             transformed_points.append(pt_tf)
         self.scene_kpts = np.asarray(transformed_points).transpose(0, 2, 1)
         return
+
+    def get_projection(self, inputs, tar_cam_pose):
+        """
+        Function to get corresponding pixel location in an image given pixel location in another image.
+        Uses camera_intrinsics and depth images to first get 3D positions of pixels in target frame,
+        then projects to another image using cv2.projectPoints().
+        Returns: (Nx2) NumPy array of N keypoints' 2D pixel coordinates.
+        Input arguments:
+        inputs - list of tuples of pixel coordinates, associated depth images and associated camera poses
+        """
+        if len(inputs)==0:
+            return []
+        target_frame = tfa.compose(np.array(tar_cam_pose[:3]),
+                                   tfq.quat2mat(np.array([tar_cam_pose[-1]] + tar_cam_pose[3:-1])),
+                                   np.ones(3))
+        point_positions = []
+        for (pt, depth, pose) in inputs:
+            pt3d_z = (depth[pt[1], pt[0]])*(1.0/self.scale)
+            if pt==[-1, -1] or pt3d_z==0:
+                continue
+            pt3d_x = (pt[0] - self.camera_intrinsics[2])*(pt3d_z/self.camera_intrinsics[0])
+            pt3d_y = (pt[1] - self.camera_intrinsics[3])*(pt3d_z/self.camera_intrinsics[1])
+            position = [pt3d_x, pt3d_y, pt3d_z]
+            source_frame  = tfa.compose(np.array(pose[:3]), tfq.quat2mat(np.array([pose[-1]] + pose[3:-1])), np.ones(3))
+            relative_tf = np.linalg.inv(target_frame).dot(source_frame)
+            position_tf = relative_tf[:3,:3].dot(position) + relative_tf[:3,3]
+            point_positions.append(position_tf)
+
+        #project 3D points to 2D image plane
+        rvec = cv2.Rodrigues(np.eye(3))[0]
+        tvec = np.zeros(3)
+        keypoint_pixels = cv2.projectPoints(np.array(point_positions), rvec, tvec, self.camera_matrix, None)[0]
+        return keypoint_pixels.transpose(1,0,2)[0]
 
     def visualize_points_in_scene(self, scene_ply_path, scene_obj_kpts):
         """
