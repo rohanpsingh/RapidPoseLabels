@@ -49,12 +49,12 @@ class GUI(TkRoot):
 
         #member variables
         self.scene_ply_paths = []
-        self.scene_kpts_2d = []
+        self.scene_gui_input = []
         self.clicked_pixel = []
         self.image_loaded=False
-        self.current_rgb_img = []
-        self.input_rgb_image = []
-        self.input_dep_image = []
+        self.current_display = []
+        self.current_rgb_image = []
+        self.current_dep_image = []
         self.current_ply_path = []
         self.current_cam_pos  = []
 
@@ -71,45 +71,48 @@ class GUI(TkRoot):
         self.display_image = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
         self.canvas.create_image(0, 0, image=self.display_image, anchor=tk.NW)
 
-    def add_kp_to_list(self, kp):
-        if len(self.scene_kpts_2d)==self.num_keypoints:
+    def add_click_to_list(self, keypoint_pixel):
+        if len(self.scene_gui_input)==self.num_keypoints:
             self.msg_box.configure(text = "all keypoints selected")
             return
-        if kp==[]: kp = [-1, -1]
-        cv2.circle(self.current_rgb_img, tuple(kp), 5, (0,0,255), -1)
-        self.display_cv_image(self.current_rgb_img)
-        self.scene_kpts_2d.append(kp)
-        self.msg_box.configure(text = "Keypoint added:\n{}".format(kp))
-        self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+        if keypoint_pixel==[]: keypoint_pixel = [-1, -1]
+        cv2.circle(self.current_display, tuple(keypoint_pixel), 5, (0,0,255), -1)
+        self.display_cv_image(self.current_display)
+        #add the clicked pixel coords, current depth image and current camera pose to list
+        self.scene_gui_input.append((keypoint_pixel, self.current_dep_image, self.current_cam_pos))
+        list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
+        self.msg_box.configure(text = "Keypoint added:\n{}".format(keypoint_pixel))
+        self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
         self.clicked_pixel = []
 
     def button_click(self, event):
-        tmp = self.current_rgb_img.copy()
+        tmp = self.current_display.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
 
     def double_button_click(self, event):
-        tmp = self.current_rgb_img.copy()
+        tmp = self.current_display.copy()
         cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
         self.display_cv_image(tmp)
         self.clicked_pixel = [event.x, event.y]
-        self.add_kp_to_list(self.clicked_pixel)
+        self.add_click_to_list(self.clicked_pixel)
 
     def btn_func_skip(self):
-        self.add_kp_to_list([])
+        self.add_click_to_list([])
 
     def btn_func_reset(self):
         """
         Function to reset the current scene.
         All selected keypoints for the current scene will be cleared.
         """
-        self.display_cv_image(self.input_rgb_image)
-        self.current_rgb_img = self.input_rgb_image.copy()
+        self.display_cv_image(self.current_rgb_image)
+        self.current_display = self.current_rgb_image.copy()
         self.clicked_pixel = []
-        self.scene_kpts_2d = []
+        self.scene_gui_input = []
+        list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
         self.msg_box.configure(text = "Scene reset")
-        self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+        self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
 
     def btn_func_load(self, index=0):
         """
@@ -123,18 +126,22 @@ class GUI(TkRoot):
         read_pair = (self.img_name_list[read_indx]).split()
         dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[1])
         rgb_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[3])
-        self.input_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
-        self.input_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
+        self.current_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
+        self.current_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
         #read the corresponding camera pose from the trajectory
         self.current_cam_pos = self.cam_pose_list[read_indx]
         #and the ply path of the associated scene (required for visualizations)
         self.current_ply_path = os.path.join(self.dataset_path, self.cur_scene_dir, self.cur_scene_dir + '.ply')
 
         #create a copy (to reset and redraw at any time)
-        self.current_rgb_img = self.input_rgb_image.copy()
+        self.current_display = self.current_rgb_image.copy()
+        #get projection of keypoints on current image
+        matched = self.process.get_projection(self.scene_gui_input, self.current_cam_pos)
+        for keypoint_pixel in matched:
+            cv2.circle(self.current_display, tuple(map(int, keypoint_pixel)), 5, (0,0,255), -1)
 
         #configure state of buttons and canvas
-        self.display_cv_image(self.current_rgb_img)
+        self.display_cv_image(self.current_display)
         self.canvas.bind('<Button-1>', self.button_click)
         self.canvas.bind('<Double-Button-1>', self.double_button_click)
         self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
@@ -148,22 +155,21 @@ class GUI(TkRoot):
         Function to lock labeled keypoints in current scene
         and move to next scene.
         """
-        while len(self.scene_kpts_2d) != self.num_keypoints:
-            self.add_kp_to_list([])
+        while len(self.scene_gui_input) != self.num_keypoints:
+            self.add_click_to_list([])
 
-        #rgb image, depth image and list of 2D keypoints for this scene
-        self.process.scene_imgs.append((self.input_rgb_image, self.input_dep_image, self.scene_kpts_2d))
-        #the camera pose for the frame
-        self.process.scene_cams.append(self.current_cam_pos)
+        #keypoint pixel coords, depth images and camera poses for this scene
+        self.process.list_of_scenes.append(self.scene_gui_input)
         #and scene ply
         self.scene_ply_paths.append(self.current_ply_path)
 
         self.clicked_pixel = []
-        self.scene_kpts_2d = []
+        self.scene_gui_input = []
         try:
             self.cur_scene_dir = next(self.scene_dir_itr)
+            list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
             self.msg_box.configure(text = "Moving to scene:\n{}".format(self.cur_scene_dir))
-            self.dat_box.configure(text = "Current keypoint list:\n{}".format(np.asarray(self.scene_kpts_2d)))
+            self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
             #read the entire list of image names and camera trajectory for current scene dir
             with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
                 self.img_name_list = file.readlines()
@@ -188,9 +194,9 @@ class GUI(TkRoot):
         Function to perform the optimization/procrustes step.
         """
         #2D-to-3D conversion
-        self.process.convert_2d_to_3d()
+        keypoint_pos = self.process.convert_2d_to_3d()
         #transform points to origins of respective scene
-        self.process.transform_points()
+        self.process.transform_points(keypoint_pos)
         #final computation step
         if self.build_model_mode:
             res, obj = self.process.compute(False)
@@ -207,9 +213,9 @@ class GUI(TkRoot):
         and visualize them in the scene.
         """
         #2D-to-3D conversion
-        self.process.convert_2d_to_3d()
+        keypoint_pos = self.process.convert_2d_to_3d()
         #transform points to origins of respective scene
-        self.process.transform_points()
+        self.process.transform_points(keypoint_pos)
         #visualize the labeled keypoints in scene
         self.process.visualize_points_in_scene(self.current_ply_path, self.process.scene_kpts[-1].transpose())
 
