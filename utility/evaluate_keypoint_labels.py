@@ -12,7 +12,7 @@ np.set_printoptions(threshold=sys.maxsize, linewidth=700)
 np.set_printoptions(precision=4, suppress=True)
 
 
-class Evaluate(Annotations):
+class EvaluateKeypointLabels(Annotations):
     """
     Class to evaluate accuracy of generated 2D keypoint labels
     if a ground truth sparse model is available, and information
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     opt = ap.parse_args()
 
     #generate annotations and obtain errors
-    evaluator = Evaluate(opt.dataset, opt.input, opt.model, opt.points, opt.visualize)
+    evaluator = EvaluateKeypointLabels(opt.dataset, opt.input, opt.model, opt.points, opt.visualize)
     evaluator.process_input()
     error_vec = evaluator.get_pixel_errors()
 
