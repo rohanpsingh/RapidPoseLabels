@@ -41,10 +41,9 @@ class ModelError():
         
     def process(self):
         # read picked points
-        pp_array = SparseModel().reader(self.path_to_picked_points)
+        pp_array = SparseModel().reader(self.path_to_picked_points, 1/1000)
         pp_model = o3d.geometry.PointCloud()
         pp_model.points = o3d.utility.Vector3dVector(pp_array)
-        pp_model.scale(1/1000, np.zeros(3))
         corr = np.zeros((len(pp_array), 2))
         corr[:, 0] = list(range(len(pp_array)))
         corr[:, 1] = list(range(len(pp_array)))
