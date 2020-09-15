@@ -4,6 +4,7 @@ import open3d as o3d
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
 from utils.sparse_model import SparseModel
+from utils.region_growing import RegionGrowing
 
 class PartialModel:
     def __init__(self, dataset_path, input_arr_path, input_model_path):
@@ -79,4 +80,39 @@ class PartialModel:
                 fragment.points.extend(o3d.utility.Vector3dVector(np.asarray(pcd.points)[idx]))
             fragment.transform(np.linalg.inv(sce_t))
             point_cloud_list.append(fragment)
+        return point_cloud_list
+
+    def get_regions(self):
+        """
+        Function to extract point cloud clusters using region-growing clustering
+        with keypoints as initial seed points. Returns the
+        list of partial models transformed into world frame.
+        """
+        point_cloud_list = []
+
+        #initialize region growing class
+        reg = RegionGrowing((5/180)*3.14, 1.0)
+
+        #iterate through a zip of list of scene dirs and the relative scene tfs
+        for data_dir_idx, (cur_scene_dir, sce_t) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
+            #get object keypoints in scene frame
+            model_points = np.vstack([self.object_model.transpose(),
+                                      np.ones(self.object_model.shape[0])])
+            model_points = np.dot(sce_t, model_points).transpose()
+
+            #load scene point cloud from .PLY file
+            cur_ply_path = os.path.join(self.dataset_path, cur_scene_dir, cur_scene_dir + '.ply')
+            pcd = o3d.io.read_point_cloud(cur_ply_path)
+            pcd.points.extend(o3d.utility.Vector3dVector(model_points[:,:3]))
+
+            #set nearest neighbors of model keypoints as seeds
+            seed_indices = list(range(len(pcd.points)-model_points.shape[0], len(pcd.points)))
+            reg.set_seeds(seed_indices)
+            regions = reg.extract(pcd)
+            for idx, segment in enumerate(regions):
+                pcd = o3d.geometry.PointCloud()
+                pcd.points = o3d.utility.Vector3dVector(np.asarray(segment))
+                pcd.paint_uniform_color([idx/len(regions), 0.706, 0.5])
+                pcd.transform(np.linalg.inv(sce_t))
+                point_cloud_list.append(pcd)
         return point_cloud_list

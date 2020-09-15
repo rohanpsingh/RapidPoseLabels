@@ -1,4 +1,5 @@
 import argparse
+import open3d as o3d
 from utils.sparse_model import SparseModel
 from utils.partial_model import PartialModel
 
@@ -16,4 +17,6 @@ if __name__ == '__main__':
     #extract useful information from input array
     generator.process_input()
     #generate labels and writes to output directory
-    samples = generator.get_fragments_by_radius()
+    samples = generator.get_regions()
+
+    o3d.visualization.draw_geometries([pcd for pcd in samples])
