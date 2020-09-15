@@ -1,6 +1,7 @@
 import math
 import open3d as o3d
 import numpy as np
+import itertools
 
 class RegionGrowing:
     def __init__(self, angle_thresh, curv_thresh):
@@ -14,7 +15,7 @@ class RegionGrowing:
         self.grow_region_rad = 0.01
         self.curvature_compute_rad = 0.01
         self.normal_compute_rad = 0.01
-        self.normal_compute_max_nn = 10
+        self.normal_compute_max_nn = 100
         return
 
     def set_seeds(self, indices):
@@ -51,6 +52,20 @@ class RegionGrowing:
         neighbors = o3d.utility.Vector3dVector(np.asarray(self.pcd.points)[indices])
         sigma = self.compute_point_curvature(neighbors)
         return sigma<self.threshold_curv
+
+    def crop_pcd(self, pcd, centroid, box_side=0.2):
+        points = np.asarray(pcd.points)
+        min_x = centroid[0]-box_side; max_x = centroid[0]+box_side
+        min_y = centroid[1]-box_side; max_y = centroid[1]+box_side
+        min_z = centroid[2]-box_side; max_z = centroid[2]+box_side
+        bound_x = np.logical_and(points[:, 0] > min_x, points[:, 0] < max_x)
+        bound_y = np.logical_and(points[:, 1] > min_y, points[:, 1] < max_y)
+        bound_z = np.logical_and(points[:, 2] > min_z, points[:, 2] < max_z)
+        bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
+        #create open3d PointCloud object
+        crop_pcd = o3d.geometry.PointCloud()
+        crop_pcd.points = o3d.utility.Vector3dVector(points[bb_filter])
+        return crop_pcd
 
     def extract(self, pcd):
         #set pcd and pcd_tree

@@ -103,16 +103,23 @@ class PartialModel:
             #load scene point cloud from .PLY file
             cur_ply_path = os.path.join(self.dataset_path, cur_scene_dir, cur_scene_dir + '.ply')
             pcd = o3d.io.read_point_cloud(cur_ply_path)
-            pcd.points.extend(o3d.utility.Vector3dVector(model_points[:,:3]))
+
+            #crop point cloud using bbox centered at mean
+            crop_pcd = reg.crop_pcd(pcd, model_points[:,:3].mean(0))
+            #down sample using voxel grid
+            crop_pcd = crop_pcd.voxel_down_sample(voxel_size=0.005)
 
             #set nearest neighbors of model keypoints as seeds
-            seed_indices = list(range(len(pcd.points)-model_points.shape[0], len(pcd.points)))
+            crop_pcd.points.extend(o3d.utility.Vector3dVector(model_points[:,:3]))
+            seed_indices = list(range(len(crop_pcd.points)-model_points.shape[0], len(crop_pcd.points)))
             reg.set_seeds(seed_indices)
-            regions = reg.extract(pcd)
+            #extract regions using seeds
+            regions = reg.extract(crop_pcd)
+
             for idx, segment in enumerate(regions):
-                pcd = o3d.geometry.PointCloud()
-                pcd.points = o3d.utility.Vector3dVector(np.asarray(segment))
-                pcd.paint_uniform_color([idx/len(regions), 0.706, 0.5])
-                pcd.transform(np.linalg.inv(sce_t))
-                point_cloud_list.append(pcd)
+                reg_pcd = o3d.geometry.PointCloud()
+                reg_pcd.points = o3d.utility.Vector3dVector(np.asarray(segment))
+                reg_pcd.paint_uniform_color([idx/len(regions), 0.706, 0.5])
+                reg_pcd.transform(np.linalg.inv(sce_t))
+                point_cloud_list.append(reg_pcd)
         return point_cloud_list
