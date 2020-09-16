@@ -8,27 +8,58 @@ class RegionGrowing:
 
         self.threshold_angle = angle_thresh
         self.threshold_curv = curv_thresh
+
+        # initialize cloud vars
         self.pcd = []
         self.pcd_tree = []
+        self.pcd_normals = []
+        self.pcd_curvature = []
 
-        #set parameters
+        # set parameters
         self.grow_region_rad = 0.01
         self.curvature_compute_rad = 0.01
         self.normal_compute_rad = 0.01
         self.normal_compute_max_nn = 100
         return
 
-    def set_seeds(self, indices):
-        self.ini_seeds = indices
+    def set_input_cloud(self, pcd):
+        """
+        Function to set the input point cloud
+        """
+        self.pcd = pcd
         return
 
-    def compute_cloud_normals(self):
+    def box_crop(self, centroid, vox_grid=None, box_side=0.2):
         """
-        Compute normals for the entire point cloud.
+        Function to crop point cloud to be within
+        a bounding box of given size and center.
         """
-        self.pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
-            radius=self.normal_compute_rad, max_nn=self.normal_compute_max_nn))
-        self.pcd_normals = self.pcd.normals
+        # set min and max in x,y,z directions
+        min_x = centroid[0]-box_side; max_x = centroid[0]+box_side
+        min_y = centroid[1]-box_side; max_y = centroid[1]+box_side
+        min_z = centroid[2]-box_side; max_z = centroid[2]+box_side
+        # get a boolean array for inside and outside points
+        points = np.asarray(self.pcd.points)
+        bound_x = np.logical_and(points[:, 0] > min_x, points[:, 0] < max_x)
+        bound_y = np.logical_and(points[:, 1] > min_y, points[:, 1] < max_y)
+        bound_z = np.logical_and(points[:, 2] > min_z, points[:, 2] < max_z)
+        bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
+        # update self.pcd with only the inside points
+        self.pcd.points = o3d.utility.Vector3dVector(points[bb_filter])
+        # down sample using voxel grid
+        if vox_grid is not None:
+            self.pcd = self.pcd.voxel_down_sample(voxel_size=vox_grid)
+        return
+
+    def set_seeds(self, points):
+        """
+        Function to append given points to point cloud
+        and set the indices as initial seeds for region
+        growing segmentation.
+        """
+        self.pcd.points.extend(o3d.utility.Vector3dVector(points))
+        seed_indices = list(range(len(self.pcd.points)-points.shape[0], len(self.pcd.points)))
+        self.ini_seeds = seed_indices
         return
 
     def compute_point_curvature(self, cluster):
@@ -53,28 +84,15 @@ class RegionGrowing:
         sigma = self.compute_point_curvature(neighbors)
         return sigma<self.threshold_curv
 
-    def crop_pcd(self, pcd, centroid, box_side=0.2):
-        points = np.asarray(pcd.points)
-        min_x = centroid[0]-box_side; max_x = centroid[0]+box_side
-        min_y = centroid[1]-box_side; max_y = centroid[1]+box_side
-        min_z = centroid[2]-box_side; max_z = centroid[2]+box_side
-        bound_x = np.logical_and(points[:, 0] > min_x, points[:, 0] < max_x)
-        bound_y = np.logical_and(points[:, 1] > min_y, points[:, 1] < max_y)
-        bound_z = np.logical_and(points[:, 2] > min_z, points[:, 2] < max_z)
-        bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
-        #create open3d PointCloud object
-        crop_pcd = o3d.geometry.PointCloud()
-        crop_pcd.points = o3d.utility.Vector3dVector(points[bb_filter])
-        return crop_pcd
+    def extract(self):
+        # build KDTree
+        self.pcd_tree = o3d.geometry.KDTreeFlann(self.pcd)
+        # pre-compute normals at each point
+        self.pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
+            radius=self.normal_compute_rad, max_nn=self.normal_compute_max_nn))
+        self.pcd_normals = self.pcd.normals
 
-    def extract(self, pcd):
-        #set pcd and pcd_tree
-        self.pcd = pcd
-        self.pcd_tree = o3d.geometry.KDTreeFlann(pcd)
-
-        #compute normals at each point
-        self.compute_cloud_normals()
-
+        # initiate region extraction
         global_region = []
         for ini_seed_idx in self.ini_seeds:
             ini_seed = self.pcd.points[ini_seed_idx][:3]

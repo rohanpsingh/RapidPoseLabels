@@ -104,17 +104,11 @@ class PartialModel:
             cur_ply_path = os.path.join(self.dataset_path, cur_scene_dir, cur_scene_dir + '.ply')
             pcd = o3d.io.read_point_cloud(cur_ply_path)
 
-            #crop point cloud using bbox centered at mean
-            crop_pcd = reg.crop_pcd(pcd, model_points[:,:3].mean(0))
-            #down sample using voxel grid
-            crop_pcd = crop_pcd.voxel_down_sample(voxel_size=0.005)
-
-            #set nearest neighbors of model keypoints as seeds
-            crop_pcd.points.extend(o3d.utility.Vector3dVector(model_points[:,:3]))
-            seed_indices = list(range(len(crop_pcd.points)-model_points.shape[0], len(crop_pcd.points)))
-            reg.set_seeds(seed_indices)
-            #extract regions using seeds
-            regions = reg.extract(crop_pcd)
+            #extract regions using model points as initial seeds
+            reg.set_input_cloud(pcd)
+            reg.box_crop(model_points[:,:3].mean(0), 0.003, 0.2)
+            reg.set_seeds(model_points[:,:3])
+            regions = reg.extract()
 
             for idx, segment in enumerate(regions):
                 reg_pcd = o3d.geometry.PointCloud()
