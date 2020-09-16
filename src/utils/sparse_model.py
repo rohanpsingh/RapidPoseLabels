@@ -23,7 +23,7 @@ class SparseModel:
             out_file.write("\n".join(out_str))
         return
 
-    def reader(self, file_path):
+    def reader(self, file_path, scale=1.0):
         """
         Function to parse the sparse model file.
         (This function can also parse *.pp PickedPoints file generated
@@ -42,6 +42,7 @@ class SparseModel:
             names.append(int(dict_['name']))
         #keypoints are unique, so they must be sorted according to ID
         out = np.asarray([points[i] for i in np.argsort(names)])
+        out = out*float(scale)
         return out
 
     def grasp_writer(self, mat, file_path="grasp_point.txt"):

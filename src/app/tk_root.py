@@ -53,8 +53,8 @@ class TkRoot:
 
     def main_layout(self):
         #destroy previous buttons
-        self.create_btn.destroy()
-        self.choose_btn.destroy()
+        for child in self.tkroot.winfo_children():
+            child.destroy()
 
         # Button definitions and placements
         self.load_btn = tk.Button(self.tkroot, text="Load New Image",

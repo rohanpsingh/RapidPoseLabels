@@ -1,18 +1,14 @@
 import os
-import sys
 import argparse
 import numpy as np
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
 import cv2
-import evaluate3d
+from procrustes import procrustes
 from utils.annotations import Annotations
+from utils.sparse_model import SparseModel
 
-np.set_printoptions(threshold=sys.maxsize, linewidth=700)
-np.set_printoptions(precision=4, suppress=True)
-
-
-class Evaluate(Annotations):
+class EvaluateKeypointLabels(Annotations):
     """
     Class to evaluate accuracy of generated 2D keypoint labels
     if a ground truth sparse model is available, and information
@@ -25,14 +21,14 @@ class Evaluate(Annotations):
         dataset_path   - path to root dataset directory
         input_arr_path - path to input npz zipped archive
         input_model_path - path to sparse model file
-        picekd_pts     - path to *.pp file for true object keypoints
+        picked_pts     - path to *.pp file for true object keypoints
         visualize      - set 'True' to visualize
         """
         super().__init__(dataset_path, input_arr_path, input_model_path, False)
         self.picked_pts = picked_pts
         self.visualize = visualize
 
-    def get_true_model(self):
+    def get_true_poses(self):
         """
         Function to find 3D positions of each defined keypoints in the frame of
         every scene origin. Uses the .npz zipped archive to get relative scene
@@ -41,21 +37,30 @@ class Evaluate(Annotations):
         holds the 3D keypoint pose configuration of the object in the i-th scene.
         """
         list_of_poses = []
+        # get selected points from input npz array
         ref_keypts = self.input_array['ref']
+        # get selection matrix frrom input npz array
         select_mat = self.input_array['sm']
-        viz_count = 0
-        for sce_id, _ in enumerate(self.list_of_scene_dirs):
-            select_mat_block = select_mat[3*viz_count:, sce_id*(3*self.num_keypts):(sce_id+1)*3*self.num_keypts]
-            vis_vec = evaluate3d.get_visibility(select_mat_block)
-            obj_man = evaluate3d.get_object_manual(ref_keypts[sce_id], vis_vec)
-            obj_def = evaluate3d.get_object_definition(self.picked_pts, vis_vec)
-            _, _, tform = evaluate3d.procrustes(obj_def, obj_man, False)
+        # convert selection matrix to a binary matrix
+        col_splits = np.hsplit(select_mat, select_mat.shape[1]//3)
+        row_splits = [np.vsplit(col, col.shape[0]//3) for col in col_splits]
+        vis_list = [sum(map(lambda x:(x==np.eye(3)).all(), mat)) for mat in row_splits]
+        # binary matrix of shape (num of scenes x num of keypoints)
+        vis_mat = np.reshape(vis_list, [self.num_scenes, self.num_keypts])
+
+        for sce_id, visibility in zip(range(len(self.list_of_scene_dirs)), vis_mat):
+            # read true model from .pp file
+            tru_model = SparseModel().reader(self.picked_pts, 1/1000)
+            # partial user-annotated 3D model
+            obj_manual = ref_keypts[sce_id].transpose()[np.nonzero(visibility)[0]]
+            # select corresponding points in true model
+            tru_model_part = tru_model[np.nonzero(visibility)[0]]
+            # use procrustes analysis to align true model to annotated points
+            _, _, tform = procrustes(tru_model_part, obj_manual, False)
 
             T = tfa.compose(tform['translation'], np.linalg.inv(tform['rotation']), np.ones(3))
             T = np.linalg.inv(T)
-            obj_all = evaluate3d.get_object_definition(self.picked_pts, np.ones(self.num_keypts))
-            true_object = np.asarray([(T[:3,:3].dot(pt) + T[:3,3]) for pt in obj_all])
-            viz_count += len(np.nonzero(vis_vec)[0])
+            true_object = np.asarray([(T[:3,:3].dot(pt) + T[:3,3]) for pt in tru_model])
             list_of_poses.append(true_object)
         return list_of_poses
 
@@ -83,7 +88,7 @@ class Evaluate(Annotations):
         Returns a list of scene-wise errors.
         """
         scene_err_list = []
-        true_poses = self.get_true_model()
+        true_poses = self.get_true_poses()
         for idx, (cur_scene_dir, sce_t) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
             err = []
             #read the names of image frames in this scene
@@ -126,7 +131,7 @@ if __name__ == '__main__':
     opt = ap.parse_args()
 
     #generate annotations and obtain errors
-    evaluator = Evaluate(opt.dataset, opt.input, opt.model, opt.points, opt.visualize)
+    evaluator = EvaluateKeypointLabels(opt.dataset, opt.input, opt.model, opt.points, opt.visualize)
     evaluator.process_input()
     error_vec = evaluator.get_pixel_errors()
 
