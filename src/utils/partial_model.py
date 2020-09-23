@@ -110,10 +110,6 @@ class PartialModel:
             reg.set_seeds(model_points[:,:3])
             regions = reg.extract()
 
-            for idx, segment in enumerate(regions):
-                reg_pcd = o3d.geometry.PointCloud()
-                reg_pcd.points = o3d.utility.Vector3dVector(np.asarray(segment))
-                reg_pcd.paint_uniform_color([idx/len(regions), 0.706, 0.5])
-                reg_pcd.transform(np.linalg.inv(sce_t))
-                point_cloud_list.append(reg_pcd)
+            #transform each region to scene tf and add to list
+            point_cloud_list.extend([region.transform(np.linalg.inv(sce_t)) for region in regions])
         return point_cloud_list
