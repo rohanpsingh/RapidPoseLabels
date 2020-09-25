@@ -9,7 +9,7 @@ from app.process import Process
 from app.tk_root import TkRoot
 
 class GUI(TkRoot):
-    def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000):
+    def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000, scenes=None):
         """
         Constructor for the GUI class.
         Input arguments:
@@ -20,6 +20,7 @@ class GUI(TkRoot):
                          (decided by the user)
         scale          - scale parameter of the RGB-D sensor
                          (1000 for Intel RealSense D435)
+        scenes         - names of scene dirs to read
         """
         #assumes images are 640x480
         self.width = 640
@@ -31,7 +32,9 @@ class GUI(TkRoot):
         self.num_keypoints = num_keypoints
 
         #get the list of scene directories
-        list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
+        list_of_scene_dirs = scenes
+        if scenes is None:
+            list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
         list_of_scene_dirs.sort()
         print("Number of scenes: ", len(list_of_scene_dirs))
         print("List of scenes: ", list_of_scene_dirs)
