@@ -149,6 +149,8 @@ class Process:
             scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
             scene_q_ini = np.array([[1, 0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
             scene_P_ini = np.array([[[0, 0, 0]]]).repeat(self.scene_kpts.shape[2], axis=0)
+            #initialize with known keypoints
+            scene_P_ini = self.scene_kpts[0].transpose()[:,np.newaxis,:]
 
             #main optimization step
             res = app.optimize.predict(self.scene_kpts, scene_t_ini, scene_q_ini, scene_P_ini, selection_matrix)
