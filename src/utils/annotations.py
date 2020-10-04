@@ -78,11 +78,18 @@ class Annotations:
                       (int(bbox_cn[0]-(bbox_sd/2)), int(bbox_cn[1]-(bbox_sd/2))),
                       (int(bbox_cn[0]+(bbox_sd/2)), int(bbox_cn[1]+(bbox_sd/2))),
                       (0,255,0), 2)
+
+        mask = np.zeros(input_img.shape[:2], dtype=np.uint8)
         #draw convex hull
-        cv2.drawContours(input_img, hull, 0, (0,255,0), -1)
+        for point in hull[0]:
+            cv2.circle(mask, tuple(map(int, point)), 2, 255, -1)
+        kernel = np.ones((5,5),np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(input_img, contours, 0, (0,255,0), -1)
 
         cv2.imshow('window', input_img)
-        cv2.waitKey(50)
+        cv2.waitKey(500)
         return
 
     def project_points(self, input_points, input_pose):
@@ -95,18 +102,15 @@ class Annotations:
         Returns:
         (u, v) pos of all object keypoints, bounding box center and scaled side.
         """
-        #project 3D points to 2D image plane
+        #project 3D sparse-model to 2D image plane
         rvec,_ = cv2.Rodrigues(input_pose[:3, :3])
         tvec = input_pose[:3,3]
         imgpts,_ = cv2.projectPoints(input_points[0], rvec, tvec, self.cam_mat, None)
         keypts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
 
-        #project 3D model to 2D image plane
+        #project 3D dense-model to 2D image plane
         imgpts,_ = cv2.projectPoints(input_points[1], rvec, tvec, self.cam_mat, None)
         objpts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
-        hull = cv2.approxPolyDP(objpts.astype(int), 5, True)
-        hull = cv2.convexHull(hull, True)
-        hullpts = np.transpose(np.asarray(hull), (1,0,2))[0]
 
         #estimate a square box using mean and min-max in x- and y-
         bbox_cn = keypts.mean(0)
@@ -118,7 +122,7 @@ class Annotations:
         if ymax>=(self.height-1): ymax=(self.height-1)
         bbox_cn = ((xmax+xmin)/2, (ymax+ymin)/2)
         bbox_sd = max((xmax-xmin), (ymax-ymin))*self.bbox_scale
-        return keypts, bbox_cn, bbox_sd/200.0, hull
+        return keypts, bbox_cn, bbox_sd/200.0, objpts
 
     def process_input(self):
         """
