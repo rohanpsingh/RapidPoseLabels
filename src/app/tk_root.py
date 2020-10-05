@@ -8,9 +8,9 @@ class TkRoot:
         # set up gui object
         self.tkroot = tk.Tk()
         self.tkroot.title(window_title)
-        self.tkroot.geometry('900x500')
+        self.tkroot.geometry('880x500')
         self.widget_wd = 25
-        self.widget_ht = 3
+        self.widget_ht = 2
 
         #image on canvas
         self.display_image = []
@@ -30,7 +30,10 @@ class TkRoot:
     def btn_func_reset(self):
         pass
 
-    def btn_func_scene(self):
+    def btn_func_next_scene(self):
+        pass
+
+    def btn_func_prev_scene(self):
         pass
 
     def btn_func_compute(self):
@@ -66,53 +69,58 @@ class TkRoot:
                                   state=tk.DISABLED,
                                   command=self.btn_func_skip)
         self.reset_btn = tk.Button(self.tkroot, text="Reset",
-                                   width=self.widget_wd,
+                                   height=self.widget_ht, width=self.widget_wd,
                                    state=tk.DISABLED,
                                    command=self.btn_func_reset)
-        self.scene_btn = tk.Button(self.tkroot, text="Next Scene",
-                                   width=self.widget_wd,
-                                   state=tk.DISABLED,
-                                   command=self.btn_func_scene)
+        self.next_scene_btn = tk.Button(self.tkroot, text="Next Scene",
+                                        height=self.widget_ht, width=10,
+                                        state=tk.DISABLED,
+                                        command=self.btn_func_next_scene)
+        self.prev_scene_btn = tk.Button(self.tkroot, text="Prev Scene",
+                                        height=self.widget_ht, width=10,
+                                        state=tk.DISABLED,
+                                        command=self.btn_func_prev_scene)
         self.compute_btn = tk.Button(self.tkroot, text="Compute",
-                                     width=self.widget_wd,
+                                     height=self.widget_ht, width=self.widget_wd,
                                      state=tk.DISABLED,
                                      command=self.btn_func_compute)
         self.display_btn = tk.Button(self.tkroot, text="Visualize",
-                                     width=self.widget_wd,
+                                     height=self.widget_ht, width=self.widget_wd,
                                      state=tk.DISABLED,
                                      command=self.btn_func_display)
         self.quit_btn = tk.Button(self.tkroot, text="Quit",
-                                  width=self.widget_wd,
+                                  height=self.widget_ht-1, width=self.widget_wd,
                                   state=tk.NORMAL,
                                   command=self.btn_func_quit)
         self.load_slider = tk.Scale(self.tkroot, from_=0, to=999,
                                     orient=tk.HORIZONTAL,
                                     showvalue=0, length=200,
                                     command=self.btn_func_load)
-        self.load_btn.grid(column=1, row=0, padx=10)
-        self.load_slider.grid(column=1, row=1, padx=10)
-        self.skip_btn.grid(column=1, row=2, padx=10)
-        self.reset_btn.grid(column=1, row=3, padx=10)
-        self.scene_btn.grid(column=1, row=4, padx=10)
-        self.compute_btn.grid(column=1, row=5, padx=10)
-        self.display_btn.grid(column=1, row=6, padx=10)
-        self.quit_btn.grid(column=1, row=7, padx=10)
+        self.load_btn.place(x=self.width+20, y=10)
+        self.load_slider.place(x=self.width+20, y=50)
+        self.skip_btn.place(x=self.width+20, y=75)
+        self.prev_scene_btn.place(x=self.width+20, y=115)
+        self.next_scene_btn.place(x=self.width+125, y=115)
+        self.reset_btn.place(x=self.width+20, y=155)
+        self.compute_btn.place(x=self.width+20, y=195)
+        self.display_btn.place(x=self.width+20, y=235)
+        self.quit_btn.place(x=self.width+20, y=460)
 
         # message box
         self.msg_box = tk.Label(self.tkroot,
                                 text="Please load an image",
-                                height = 5, width=self.widget_wd,
+                                height = 5, width=self.widget_wd+3,
                                 bg='blue', fg='white')
         self.dat_box = tk.Label(self.tkroot,
                                 text="Current keypoint list:\n{}".format([]),
-                                height = 10, width=self.widget_wd,
+                                height = 10, width=self.widget_wd+3,
                                 bg='blue', fg='white')
-        self.msg_box.grid(column=1, row=8, padx=10)
-        self.dat_box.grid(column=1, row=9, rowspan=3, padx=10, pady=10)
+        self.msg_box.place(x=self.width+20, y=275)
+        self.dat_box.place(x=self.width+20, y=340)
 
         # Create a canvas that can fit the image
         self.canvas = tk.Canvas(self.tkroot, width = self.width, height = self.height)
-        self.canvas.grid(column=0, row=0, rowspan=10, padx=10, pady=10)
+        self.canvas.place(x=10, y=10)
         self.canvas.create_rectangle(0, 0, self.width, self.height, fill='blue')
 
     def init_layout(self):

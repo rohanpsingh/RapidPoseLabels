@@ -151,9 +151,16 @@ class GUI(TkRoot):
         self.image_loaded=True
         self.skip_btn.configure(state=tk.NORMAL)
         self.reset_btn.configure(state=tk.NORMAL)
-        self.scene_btn.configure(state=tk.NORMAL)
+        self.next_scene_btn.configure(state=tk.NORMAL)
+        self.display_btn.configure(state=tk.NORMAL)
 
-    def btn_func_scene(self):
+    def btn_func_prev_scene(self):
+        """
+        Function to move to prev scene
+        """
+        return
+
+    def btn_func_next_scene(self):
         """
         Function to lock labeled keypoints in current scene
         and move to next scene.
@@ -188,18 +195,19 @@ class GUI(TkRoot):
         self.image_loaded=False
         self.skip_btn.configure(state=tk.DISABLED)
         self.reset_btn.configure(state=tk.DISABLED)
-        self.scene_btn.configure(state=tk.DISABLED)
+        self.next_scene_btn.configure(state=tk.DISABLED)
+        self.prev_scene_btn.configure(state=tk.NORMAL)
         self.compute_btn.configure(state=tk.NORMAL)
-        self.display_btn.configure(state=tk.NORMAL)
+        self.display_btn.configure(state=tk.DISABLED)
 
     def btn_func_compute(self):
         """
         Function to perform the optimization/procrustes step.
         """
         #2D-to-3D conversion
-        keypoint_pos = self.process.convert_2d_to_3d()
+        keypoint_pos = self.process.convert_2d_to_3d(self.process.list_of_scenes)
         #transform points to origins of respective scene
-        self.process.transform_points(keypoint_pos)
+        self.process.transform_points(keypoint_pos, self.process.list_of_scenes)
         #final computation step
         if self.build_model_mode:
             res, obj = self.process.compute(False)
@@ -216,11 +224,14 @@ class GUI(TkRoot):
         and visualize them in the scene.
         """
         #2D-to-3D conversion
-        keypoint_pos = self.process.convert_2d_to_3d()
+        keypoint_pos = self.process.convert_2d_to_3d([self.scene_gui_input])
         #transform points to origins of respective scene
-        self.process.transform_points(keypoint_pos)
+        self.process.transform_points(keypoint_pos, [self.scene_gui_input])
         #visualize the labeled keypoints in scene
-        self.process.visualize_points_in_scene(self.current_ply_path, self.process.scene_kpts[-1].transpose())
+        obj = []
+        if not self.process.scene_kpts==[]:
+            obj = self.process.scene_kpts[0].transpose()
+        self.process.visualize_points_in_scene(self.current_ply_path, obj)
 
     def btn_func_choose(self):
         #set GUI mode
@@ -261,4 +272,4 @@ class GUI(TkRoot):
             self.num_keypoints = 2
             self.main_layout()
             self.skip_btn.configure(state=tk.DISABLED)
-            self.scene_btn.configure(state=tk.DISABLED)
+            self.next_scene_btn.configure(state=tk.DISABLED)

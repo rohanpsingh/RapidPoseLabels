@@ -37,13 +37,13 @@ class Process:
         self.camera_matrix[0,2] = self.camera_intrinsics[2]
         self.camera_matrix[1,2] = self.camera_intrinsics[3]
 
-    def convert_2d_to_3d(self):
+    def convert_2d_to_3d(self, list_of_scenes):
         """
         Function to convert 2D keypoint pixels to 3D points in scene.
         """
         self.select_vec = []
         pts_3d = []
-        for scene in self.list_of_scenes:
+        for scene in list_of_scenes:
             w = []
             for (pt, dep, _) in scene:
                 pt3d_z = (dep[pt[1], pt[0]])*(1.0/self.scale)
@@ -59,16 +59,18 @@ class Process:
             pts_3d.append(w)
         return np.asarray(pts_3d)
 
-    def transform_points(self, points_3d):
+    def transform_points(self, points_3d, list_of_scenes):
         """
         Function to transform 3D points to the origins of respective scenes.
         """
-        transformed_points = []
-        for scene_points, scene_meta in zip(points_3d, self.list_of_scenes):
+        if points_3d.size==0:
+            self.scene_kpts = []
+            return
+        self.scene_kpts = np.empty([0, 3, points_3d.shape[1]])
+        for scene_points, scene_meta in zip(points_3d, list_of_scenes):
             scene_poses = [(np.array([pose[-1]] + pose[3:-1]), np.array(pose[:3])) for (_, _, pose) in scene_meta]
             pt_tf = [tfq.quat2mat(quat).dot(pt3d) + trns for pt3d, (quat, trns) in zip(scene_points, scene_poses)]
-            transformed_points.append(pt_tf)
-        self.scene_kpts = np.asarray(transformed_points).transpose(0, 2, 1)
+            self.scene_kpts = np.vstack((self.scene_kpts, np.asarray(pt_tf).transpose()[np.newaxis]))
         return
 
     def get_projection(self, inputs, tar_cam_pose):
