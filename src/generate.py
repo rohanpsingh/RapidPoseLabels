@@ -1,9 +1,4 @@
 import argparse
-import os
-import cv2
-import numpy as np
-import transforms3d.quaternions as tfq
-import transforms3d.affines as tfa
 from utils.sparse_model import SparseModel
 from utils.annotations import Annotations
 from utils.dataset_writer import DatasetWriter
