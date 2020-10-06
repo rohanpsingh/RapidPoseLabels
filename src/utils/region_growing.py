@@ -40,12 +40,14 @@ class RegionGrowing:
         min_z = centroid[2]-box_side; max_z = centroid[2]+box_side
         # get a boolean array for inside and outside points
         points = np.asarray(self.pcd.points)
+        colors = np.asarray(self.pcd.colors)
         bound_x = np.logical_and(points[:, 0] > min_x, points[:, 0] < max_x)
         bound_y = np.logical_and(points[:, 1] > min_y, points[:, 1] < max_y)
         bound_z = np.logical_and(points[:, 2] > min_z, points[:, 2] < max_z)
         bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
         # update self.pcd with only the inside points
         self.pcd.points = o3d.utility.Vector3dVector(points[bb_filter])
+        self.pcd.colors = o3d.utility.Vector3dVector(colors[bb_filter])
         # down sample using voxel grid
         if vox_grid is not None:
             self.pcd = self.pcd.voxel_down_sample(voxel_size=vox_grid)
@@ -58,6 +60,7 @@ class RegionGrowing:
         growing segmentation.
         """
         self.pcd.points.extend(o3d.utility.Vector3dVector(points))
+        self.pcd.colors.extend(o3d.utility.Vector3dVector(np.asarray([[0,0,0] for i in points])))
         seed_indices = list(range(len(self.pcd.points)-points.shape[0], len(self.pcd.points)))
         self.ini_seeds = seed_indices
         return
@@ -95,14 +98,16 @@ class RegionGrowing:
         # initiate region extraction
         global_region = []
         for ini_seed_idx in self.ini_seeds:
-            ini_seed = self.pcd.points[ini_seed_idx][:3]
+            ini_seed = self.pcd.points[ini_seed_idx]
             list_of_seeds = []
             list_of_seeds_idxs = []
-            current_region = []
+            current_region = o3d.geometry.PointCloud()
             current_region_idxs = []
             list_of_seeds.append(ini_seed)
             list_of_seeds_idxs.append(ini_seed_idx)
-            current_region.append(ini_seed)
+            #populate current region
+            current_region.points.append(ini_seed)
+            current_region.colors.append(self.pcd.colors[ini_seed_idx])
             current_region_idxs.append(ini_seed_idx)
             while len(list_of_seeds):
                 current_seed = list_of_seeds.pop()
@@ -110,10 +115,12 @@ class RegionGrowing:
                 [_, nghbr_idxs, _] = self.pcd_tree.search_radius_vector_3d(
                     current_seed, self.grow_region_rad)
                 for nghbr_idx in nghbr_idxs:
-                    nghbr_point = self.pcd.points[nghbr_idx][:3]
+                    nghbr_point = self.pcd.points[nghbr_idx]
                     is_in_region = self.validate_point(nghbr_idx, current_seed_idx)
                     if nghbr_idx not in current_region_idxs and is_in_region:
-                        current_region.append(nghbr_point)
+                        #populate current region
+                        current_region.points.append(nghbr_point)
+                        current_region.colors.append(self.pcd.colors[nghbr_idx])
                         current_region_idxs.append(nghbr_idx)
                         is_a_seed = self.validate_seed(nghbr_point)
                         if is_a_seed:

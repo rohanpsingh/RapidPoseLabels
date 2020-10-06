@@ -37,11 +37,11 @@ class ModelError():
 
         # read ply model
         self.ply_model = o3d.io.read_point_cloud(self.path_to_ply_model)
-        self.ply_model.scale(1/1000, np.zeros(3))
+        self.ply_model.scale(PLY_SCALE, np.zeros(3))
         
     def process(self):
         # read picked points
-        pp_array = SparseModel().reader(self.path_to_picked_points, 1/1000)
+        pp_array = SparseModel().reader(self.path_to_picked_points, PP_SCALE)
         pp_model = o3d.geometry.PointCloud()
         pp_model.points = o3d.utility.Vector3dVector(pp_array)
         corr = np.zeros((len(pp_array), 2))
@@ -76,6 +76,10 @@ if __name__ == '__main__':
     ap.add_argument("--pp", required=True, help='path to MeshLab *.pp file')
     ap.add_argument("--visualize", action='store_true', help='to visualize model fit')
     opt = ap.parse_args()
+
+    #set scale factors
+    PLY_SCALE = 1
+    PP_SCALE = 1
 
     # generate annotations and obtain errors
     evaluator = ModelError(*vars(opt).values())

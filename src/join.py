@@ -19,4 +19,8 @@ if __name__ == '__main__':
     #generate labels and writes to output directory
     samples = generator.get_regions()
 
-    o3d.visualization.draw_geometries([pcd for pcd in samples])
+    #interactive visualization
+    out_pcd = o3d.geometry.PointCloud()
+    for pcd in samples:
+        out_pcd += pcd
+    o3d.visualization.draw_geometries_with_editing([out_pcd])

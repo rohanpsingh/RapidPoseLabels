@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import open3d as o3d
 import transforms3d.quaternions as tfq
 import transforms3d.affines as tfa
 from utils.sparse_model import SparseModel
@@ -62,10 +63,13 @@ class Annotations:
         Input arguments:
         sample - labeled sample (RGB image, (keypoint, center pos, scale))
         """
+
         input_img = sample[0]
         keypts = sample[1][0]
         bbox_cn = sample[1][1]
         bbox_sd = sample[1][2]*200
+        hull = [sample[1][3]]
+
         #draw keypoints
         for point in keypts:
             cv2.circle(input_img, tuple(map(int, point)), 5, (255, 0, 0), -1)
@@ -74,8 +78,18 @@ class Annotations:
                       (int(bbox_cn[0]-(bbox_sd/2)), int(bbox_cn[1]-(bbox_sd/2))),
                       (int(bbox_cn[0]+(bbox_sd/2)), int(bbox_cn[1]+(bbox_sd/2))),
                       (0,255,0), 2)
+
+        mask = np.zeros(input_img.shape[:2], dtype=np.uint8)
+        #draw convex hull
+        for point in hull[0]:
+            cv2.circle(mask, tuple(map(int, point)), 2, 255, -1)
+        kernel = np.ones((5,5),np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(input_img, contours, 0, (0,255,0), -1)
+
         cv2.imshow('window', input_img)
-        cv2.waitKey(50)
+        cv2.waitKey(500)
         return
 
     def project_points(self, input_points, input_pose):
@@ -83,16 +97,20 @@ class Annotations:
         Function to project the sparse object model onto the RGB image
         according to the provided pose of the object model in camera frame.
         Input arguments:
-        input_points - object model 3D points
+        input_points - [sparse object model, dense object model]
         input_pose   - pose of object model in camera frame
         Returns:
         (u, v) pos of all object keypoints, bounding box center and scaled side.
         """
-        #project 3D points to 2D image plane
+        #project 3D sparse-model to 2D image plane
         rvec,_ = cv2.Rodrigues(input_pose[:3, :3])
         tvec = input_pose[:3,3]
-        imgpts,_ = cv2.projectPoints(input_points, rvec, tvec, self.cam_mat, None)
+        imgpts,_ = cv2.projectPoints(input_points[0], rvec, tvec, self.cam_mat, None)
         keypts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
+
+        #project 3D dense-model to 2D image plane
+        imgpts,_ = cv2.projectPoints(input_points[1], rvec, tvec, self.cam_mat, None)
+        objpts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
 
         #estimate a square box using mean and min-max in x- and y-
         bbox_cn = keypts.mean(0)
@@ -104,7 +122,7 @@ class Annotations:
         if ymax>=(self.height-1): ymax=(self.height-1)
         bbox_cn = ((xmax+xmin)/2, (ymax+ymin)/2)
         bbox_sd = max((xmax-xmin), (ymax-ymin))*self.bbox_scale
-        return keypts, bbox_cn, bbox_sd/200.0
+        return keypts, bbox_cn, bbox_sd/200.0, objpts
 
     def process_input(self):
         """
@@ -119,8 +137,11 @@ class Annotations:
         out_tfs = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
         self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_tfs))
 
-        #get object model from input_array
-        self.object_model = SparseModel().reader(self.model_path)
+        #read sparse model from input array
+        sparse_model = SparseModel().reader(self.model_path)
+        #read dense model from .PLY file
+        dense_model = o3d.io.read_point_cloud(os.path.join(os.path.dirname(self.model_path), "dense.ply"))
+        self.object_model = [sparse_model, np.asarray(dense_model.points)]
         return
 
     def generate_labels(self):
