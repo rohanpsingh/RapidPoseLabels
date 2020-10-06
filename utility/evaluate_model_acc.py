@@ -16,6 +16,7 @@ def draw_registration_result(source, target, transformation):
         vis_mesh_list.append(keypt)
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     vis_mesh_list.append(target_temp)
+    vis_mesh_list.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1))
     o3d.visualization.draw_geometries(vis_mesh_list)
 
 class ModelError():

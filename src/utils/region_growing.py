@@ -19,7 +19,7 @@ class RegionGrowing:
         self.grow_region_rad = 0.01
         self.curvature_compute_rad = 0.01
         self.normal_compute_rad = 0.01
-        self.normal_compute_max_nn = 100
+        self.normal_compute_max_nn = 30
         return
 
     def set_input_cloud(self, pcd):
@@ -126,5 +126,7 @@ class RegionGrowing:
                         if is_a_seed:
                             list_of_seeds.append(nghbr_point)
                             list_of_seeds_idxs.append(nghbr_idx)
+                    if len(current_region.points)>1000:
+                        break
             global_region.append(current_region)
         return global_region
