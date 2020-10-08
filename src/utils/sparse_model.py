@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 class SparseModel:
-    def writer(self, object_model, file_path="sparse_model.txt"):
+    def writer(self, object_model, file_path="sparse_model.txt", overwrite=False):
         """
         Function to save the generated sparse model in the following format
         <point x="000000" y="000000" z="000000" name="0"/> in a .txt file.
@@ -12,6 +12,8 @@ class SparseModel:
                        where N is the number of keypoints on the model.
         filename     - name of the output file inside the output directory.
                        (sparse_model.txt by default)
+        overwrite    - set to True if overwrite existing file
+                       (False by default)
         """
         out_str = ["<SparseObjectPoints>"]
         for idx, point in enumerate(object_model):
@@ -19,8 +21,12 @@ class SparseModel:
             kpt_str = kpt_str + str(" name=\"{}\"/>".format(idx))
             out_str.append(kpt_str)
         out_str.append("</SparseObjectPoints>\n")
-        with open(os.path.join(file_path), 'a') as out_file:
-            out_file.write("\n".join(out_str))
+        if overwrite:
+            with open(os.path.join(file_path), 'w') as out_file:
+                out_file.write("\n".join(out_str))
+        else:
+            with open(os.path.join(file_path), 'a') as out_file:
+                out_file.write("\n".join(out_str))
         return
 
     def reader(self, file_path, scale=1.0):
