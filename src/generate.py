@@ -22,7 +22,7 @@ if __name__ == '__main__':
     else:
         sparse_path = os.path.join(opt.experiment, "gt_sparse.txt")
         dense_path = os.path.join(opt.experiment, "gt_cad.ply")
-        scene_meta = os.path.join(opt.experiment, "saved_meta_data.npz")
+        scene_meta = os.path.join(opt.experiment, "gt_meta_data.npz")
     #set up Annotations
     label_generator = Annotations(opt.dataset, sparse_path, dense_path, scene_meta, opt.visualize)
     #extract useful information from input array
