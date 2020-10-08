@@ -7,23 +7,27 @@ import transforms3d.affines as tfa
 from utils.sparse_model import SparseModel
 
 class Annotations:
-    def __init__(self, dataset_path, input_arr_path, input_model_path, visualize=False):
+    def __init__(self, dataset_dir_path, sparse_model_path, dense_model_path, scene_meta_path, visualize=False):
         """
         Constructor for Annotations class.
         Input arguments:
-        dataset_path   - path to root dataset directory
-        input_arr_path - path to input npz zipped archive
-        input_model_path - path to sparse model file
-        visualize      - set 'True' to visualize
+        dataset_dir_path   - path to root dataset directory
+        sparse_model_path  - path to sparse model (*.txt)
+        dense_model_path   - path to dense model (*.ply)
+        scene_meta_path    - path to scenes' meta info (*.npz)
+        visualize          - set 'True' to visualize
         """
-        self.dataset_path = dataset_path
-        self.input_array  = np.load(input_arr_path)
+        self.dataset_path = dataset_dir_path
+        self.input_array  = np.load(scene_meta_path)
         self.visualize    = visualize
-        self.model_path   = input_model_path
+        #read sparse model from input array
+        sparse_model = SparseModel().reader(sparse_model_path)
+        #read dense model from .PLY file
+        dense_model = o3d.io.read_point_cloud(dense_model_path)
 
         #read camera intrinsics matrix from camera.txt in root directory
         self.cam_mat = np.eye(3)
-        with open(os.path.join(dataset_path, 'camera.txt'), 'r') as file:
+        with open(os.path.join(self.dataset_path, 'camera.txt'), 'r') as file:
             camera_intrinsics = file.readlines()[0].split()
             camera_intrinsics = list(map(float, camera_intrinsics))
         self.cam_mat[0,0] = camera_intrinsics[0]
@@ -36,7 +40,8 @@ class Annotations:
         self.num_keypts = self.input_array['ref'].shape[2]
 
         #paths to each of the scene dirs inside root dir
-        self.list_of_scene_dirs = [d for d in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, d))]
+        self.list_of_scene_dirs = [d for d in os.listdir(self.dataset_path)
+                                   if os.path.isdir(os.path.join(self.dataset_path, d))]
         self.list_of_scene_dirs.sort()
         self.list_of_scene_dirs = self.list_of_scene_dirs[:self.num_scenes]
         print("List of scenes: ", self.list_of_scene_dirs)
@@ -53,7 +58,7 @@ class Annotations:
         self.ratio = 100
 
         #this is the object model
-        self.object_model = []
+        self.object_model = [sparse_model, np.asarray(dense_model.points)]
         #these are the relative scene transformations
         self.scene_tfs = []
 
@@ -73,21 +78,17 @@ class Annotations:
         #draw keypoints
         for point in keypts:
             cv2.circle(input_img, tuple(map(int, point)), 5, (255, 0, 0), -1)
-        #draw bounding-box
-        cv2.rectangle(input_img,
-                      (int(bbox_cn[0]-(bbox_sd/2)), int(bbox_cn[1]-(bbox_sd/2))),
-                      (int(bbox_cn[0]+(bbox_sd/2)), int(bbox_cn[1]+(bbox_sd/2))),
-                      (0,255,0), 2)
-
-        mask = np.zeros(input_img.shape[:2], dtype=np.uint8)
         #draw convex hull
+        mask = np.zeros(input_img.shape[:2], dtype=np.uint8)
         for point in hull[0]:
             cv2.circle(mask, tuple(map(int, point)), 2, 255, -1)
         kernel = np.ones((5,5),np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(input_img, contours, 0, (0,255,0), -1)
-
+        #draw bounding-box
+        x,y,w,h = cv2.boundingRect(contours[0])
+        cv2.rectangle(input_img, (x,y), (x+w,y+h), (0,255,0), 2)
         cv2.imshow('window', input_img)
         cv2.waitKey(500)
         return
@@ -136,12 +137,6 @@ class Annotations:
         out_qs  = self.input_array['scenes'][(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
         out_tfs = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
         self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_tfs))
-
-        #read sparse model from input array
-        sparse_model = SparseModel().reader(self.model_path)
-        #read dense model from .PLY file
-        dense_model = o3d.io.read_point_cloud(os.path.join(os.path.dirname(self.model_path), "dense.ply"))
-        self.object_model = [sparse_model, np.asarray(dense_model.points)]
         return
 
     def generate_labels(self):
