@@ -145,7 +145,7 @@ class Process:
             success_flag, res = app.geo_constrain.predict(object_model, self.scene_kpts.transpose(0,2,1), self.select_vec)
             scene_t = np.asarray([np.array(i[:3,3]) for i in res])
             scene_q = np.asarray([tfq.mat2quat(np.array(i[:3,:3])) for i in res])
-            computed_vector = np.concatenate((scene_t[1:, :].flatten(), scene_q[1:, :].flatten()))
+            computed_vector = np.concatenate((scene_t.flatten(), scene_q.flatten()))
         else:
             #initialize quaternions and translations for each scene
             scene_t_ini = np.array([[0, 0, 0]]).repeat(self.scene_kpts.shape[0], axis=0)
