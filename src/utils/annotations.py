@@ -36,8 +36,8 @@ class Annotations:
         self.cam_mat[1,2] = camera_intrinsics[3]
 
         #get number of scenes and number of keypoints
-        self.num_scenes = self.input_array['ref'].shape[0]
-        self.num_keypts = self.input_array['ref'].shape[2]
+        self.num_scenes = (int(self.input_array['scenes'].shape[0]/7)+1)
+        self.num_keypts = sparse_model.shape[0]
 
         #paths to each of the scene dirs inside root dir
         self.list_of_scene_dirs = [d for d in os.listdir(self.dataset_path)
