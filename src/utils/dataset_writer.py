@@ -51,6 +51,6 @@ class DatasetWriter:
         #write RGB image to frames/frame_0####.txt
         cv2.imwrite(os.path.join(self.output_dir, 'frames', 'frame_' + repr(index).zfill(5) + '.jpg'), rgb_image)
         #write mask label to masks/mask_0####.txt
-        cv2.imwrite(os.path.join(self.output_dir, 'masks', 'mask_' + repr(index).zfill(5) + '.jpg'), mask_label)
+        cv2.imwrite(os.path.join(self.output_dir, 'masks', 'mask_' + repr(index).zfill(5) + '.png'), mask_label)
         return
 

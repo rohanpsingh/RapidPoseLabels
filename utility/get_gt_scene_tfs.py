@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     #set scale factors
     PLY_SCALE = 1
-    PP_SCALE = 0.001
+    PP_SCALE = 1
 
     path_to_dataset_dir = opt.dataset
     path_to_experiment_dir = opt.experiment
