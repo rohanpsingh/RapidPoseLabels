@@ -90,7 +90,7 @@ class Annotations:
         x,y,w,h = cv2.boundingRect(contours[0])
         cv2.rectangle(input_img, (x,y), (x+w,y+h), (0,255,0), 2)
         cv2.imshow('window', input_img)
-        cv2.waitKey(500)
+        cv2.waitKey(10)
         return
 
     def project_points(self, input_points, input_pose):
@@ -173,7 +173,7 @@ class Annotations:
 
                 #visualize if required
                 if self.visualize:
-                    self.visualize_sample((input_rgb_image, label))
+                    self.visualize_sample((input_rgb_image.clone(), label))
 
             print("Created {} labeled samples from dataset {} (with {} raw samples).".format(len(zipped_list), data_dir_idx, len(img_name_list)))
         return samples
