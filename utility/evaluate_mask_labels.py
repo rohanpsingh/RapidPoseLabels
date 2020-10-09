@@ -54,6 +54,6 @@ if __name__ == '__main__':
 
     list_iou = []
     for img1, img2 in zip(images1, images2):
-        iou = computeIntersectionOverUnion(img1, img2, True)
+        iou = computeIntersectionOverUnion(img1, img2, False)
         list_iou.append(iou)
     print("mean IoU = ", sum(list_iou)/len(list_iou))
