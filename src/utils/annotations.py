@@ -24,6 +24,7 @@ class Annotations:
         sparse_model = SparseModel().reader(sparse_model_path)
         #read dense model from .PLY file
         dense_model = o3d.io.read_point_cloud(dense_model_path)
+        dense_model = dense_model.voxel_down_sample(voxel_size=0.005)
 
         #read camera intrinsics matrix from camera.txt in root directory
         self.cam_mat = np.eye(3)
@@ -55,7 +56,7 @@ class Annotations:
         #bounding-box needs to scaled up to avoid excessive cropping
         self.bbox_scale = 1.5
         #define a ratio of labeled samples to produce
-        self.ratio = 100
+        self.ratio = 10
 
         #this is the object model
         self.object_model = [sparse_model, np.asarray(dense_model.points)]
