@@ -11,12 +11,15 @@ def computeIntersectionOverUnion(img1, img2, visualize=False):
     for img in images:
         assert(img.dtype == np.uint8)
         assert(img.ndim == 2)
+    if (np.all(img1==0) or np.all(img1==0)):
+        return 1
     union = np.logical_or(*images)
     intersection = np.logical_and(*images)
     IoU = np.sum(intersection) / float(np.sum(union))
 
     if visualize:
         fig = plt.figure()
+
         subplot = fig.add_subplot(2,3,1)
         plt.imshow(images[0])
         subplot.set_title('image 1')
