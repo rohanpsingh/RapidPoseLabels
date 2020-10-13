@@ -116,5 +116,5 @@ if __name__ == '__main__':
     est_points, gt_points = evaluator.closest_points(align_tf)
     errors = evaluator.compute_error(est_points, gt_points)
 
-    print("Mean error: {} meters".format(sum(errors)/len(errors)))
+    print("Mean error: {} mm".format(1000*sum(errors)/len(errors)))
     print("---")
