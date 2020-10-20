@@ -87,13 +87,14 @@ class ModelError():
         SparseModel().writer(np.asarray(nn_pcd.points), write_path, True)
         write_path = os.path.join(os.path.dirname(self.path_to_sparse_model), "gt_cad.ply")
         o3d.io.write_point_cloud(write_path, self.ply_model.transform(np.linalg.inv(transformation)))
-        return
+        return np.asarray(self.sparse_model.points), nn_points
 
-    def compute_error(self, transformation):
-        # compute inliers rmse
-        evaluation = o3d.registration.evaluate_registration(self.sparse_model, self.ply_model,
-                                                            self.threshold, transformation)
-        return evaluation.inlier_rmse
+    def compute_error(self, set_a, set_b):
+        errors = []
+        for point_a, point_b in zip(set_a, set_b):
+            dist = np.linalg.norm(point_a[:3] - point_b[:3])
+            errors.append(dist)
+        return errors
 
 if __name__ == '__main__':
 
@@ -112,8 +113,8 @@ if __name__ == '__main__':
     # generate annotations and obtain errors
     evaluator = ModelError(*vars(opt).values())
     align_tf = evaluator.process()
-    evaluator.closest_points(align_tf)
-    err = evaluator.compute_error(align_tf)
+    est_points, gt_points = evaluator.closest_points(align_tf)
+    errors = evaluator.compute_error(est_points, gt_points)
 
-    print("Inliers RMSE: ", err)
+    print("Mean error: {} mm".format(1000*sum(errors)/len(errors)))
     print("---")

@@ -24,6 +24,7 @@ class Annotations:
         sparse_model = SparseModel().reader(sparse_model_path)
         #read dense model from .PLY file
         dense_model = o3d.io.read_point_cloud(dense_model_path)
+        dense_model = dense_model.voxel_down_sample(voxel_size=0.005)
 
         #read camera intrinsics matrix from camera.txt in root directory
         self.cam_mat = np.eye(3)
@@ -36,8 +37,8 @@ class Annotations:
         self.cam_mat[1,2] = camera_intrinsics[3]
 
         #get number of scenes and number of keypoints
-        self.num_scenes = self.input_array['ref'].shape[0]
-        self.num_keypts = self.input_array['ref'].shape[2]
+        self.num_scenes = (int(self.input_array['scenes'].shape[0]/7)+1)
+        self.num_keypts = sparse_model.shape[0]
 
         #paths to each of the scene dirs inside root dir
         self.list_of_scene_dirs = [d for d in os.listdir(self.dataset_path)
@@ -55,7 +56,7 @@ class Annotations:
         #bounding-box needs to scaled up to avoid excessive cropping
         self.bbox_scale = 1.5
         #define a ratio of labeled samples to produce
-        self.ratio = 100
+        self.ratio = 10
 
         #this is the object model
         self.object_model = [sparse_model, np.asarray(dense_model.points)]
@@ -73,24 +74,19 @@ class Annotations:
         keypts = sample[1][0]
         bbox_cn = sample[1][1]
         bbox_sd = sample[1][2]*200
-        hull = [sample[1][3]]
+        mask = sample[1][3]
 
         #draw keypoints
         for point in keypts:
             cv2.circle(input_img, tuple(map(int, point)), 5, (255, 0, 0), -1)
         #draw convex hull
-        mask = np.zeros(input_img.shape[:2], dtype=np.uint8)
-        for point in hull[0]:
-            cv2.circle(mask, tuple(map(int, point)), 2, 255, -1)
-        kernel = np.ones((5,5),np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(input_img, contours, 0, (0,255,0), -1)
         #draw bounding-box
         x,y,w,h = cv2.boundingRect(contours[0])
         cv2.rectangle(input_img, (x,y), (x+w,y+h), (0,255,0), 2)
         cv2.imshow('window', input_img)
-        cv2.waitKey(500)
+        cv2.waitKey(10)
         return
 
     def project_points(self, input_points, input_pose):
@@ -112,6 +108,13 @@ class Annotations:
         #project 3D dense-model to 2D image plane
         imgpts,_ = cv2.projectPoints(input_points[1], rvec, tvec, self.cam_mat, None)
         objpts = np.transpose(np.asarray(imgpts), (1,0,2))[0]
+        mask = np.zeros((self.height, self.width), dtype=np.uint8)
+        for point in objpts:
+            cv2.circle(mask, tuple(map(int, point)), 2, 255, -1)
+        kernel = np.ones((5,5),np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(mask, contours, 0, 255, -1)
 
         #estimate a square box using mean and min-max in x- and y-
         bbox_cn = keypts.mean(0)
@@ -123,7 +126,7 @@ class Annotations:
         if ymax>=(self.height-1): ymax=(self.height-1)
         bbox_cn = ((xmax+xmin)/2, (ymax+ymin)/2)
         bbox_sd = max((xmax-xmin), (ymax-ymin))*self.bbox_scale
-        return keypts, bbox_cn, bbox_sd/200.0, objpts
+        return keypts, bbox_cn, bbox_sd/200.0, mask
 
     def process_input(self):
         """
@@ -173,7 +176,7 @@ class Annotations:
 
                 #visualize if required
                 if self.visualize:
-                    self.visualize_sample((input_rgb_image, label))
+                    self.visualize_sample((input_rgb_image.copy(), label))
 
             print("Created {} labeled samples from dataset {} (with {} raw samples).".format(len(zipped_list), data_dir_idx, len(img_name_list)))
         return samples
