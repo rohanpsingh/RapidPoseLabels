@@ -164,7 +164,7 @@ class Process:
             object_model = object_model.squeeze()
             #save the generated sparse object model
             SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"), True)
-            computed_vector = res.x[:(len_ts+len_qs)]
+            computed_vector = np.concatenate([np.zeros(3), res.x[:len_ts], tfq.qeye(), res.x[len_ts:len_ts+len_qs]])
             success_flag = res.success
 
         #save the input and the output from optimization step
