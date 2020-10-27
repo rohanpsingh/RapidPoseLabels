@@ -163,7 +163,7 @@ class Process:
             object_model = res.x[len_ts+len_qs:].reshape(scene_P_ini.shape)
             object_model = object_model.squeeze()
             #save the generated sparse object model
-            SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"))
+            SparseModel().writer(object_model, os.path.join(self.output_dir, "sparse_model.txt"), True)
             computed_vector = res.x[:(len_ts+len_qs)]
             success_flag = res.success
 
