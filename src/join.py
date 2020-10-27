@@ -9,13 +9,14 @@ if __name__ == '__main__':
     # get command line arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", required=True, help='path to root dir of raw dataset')
-    ap.add_argument("--experiment", required=True, help='path to experiment directory')
+    ap.add_argument("--sparse", required=True, help='path to sparse model file')
+    ap.add_argument("--meta", required=True, help='path to saved_meta_data.npz file')
     opt = ap.parse_args()
 
     #set up Annotations
-    sparse_model_path = os.path.join(opt.experiment, "sparse_model.txt")
-    scene_meta_path = os.path.join(opt.experiment, "saved_meta_data.npz")
-    generator = PartialModel(opt.dataset, scene_meta_path, sparse_model_path)
+    sparse_model_path = opt.sparse
+    scene_meta_path = opt.meta
+    generator = PartialModel(opt.dataset, opt.meta, opt.sparse)
     #extract useful information from input array
     generator.process_input()
     #generate labels and writes to output directory
