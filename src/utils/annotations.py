@@ -37,7 +37,7 @@ class Annotations:
         self.cam_mat[1,2] = camera_intrinsics[3]
 
         #get number of scenes and number of keypoints
-        self.num_scenes = (int(self.input_array['scenes'].shape[0]/7)+1)
+        self.num_scenes = int(self.input_array['scenes'].shape[0]/7)
         self.num_keypts = sparse_model.shape[0]
 
         #paths to each of the scene dirs inside root dir
@@ -140,10 +140,10 @@ class Annotations:
         and the relative scene transformations.
         """
         #get the relative scene transforamtions from input array
-        out_ts  = self.input_array['scenes'][ :(self.num_scenes-1)*3].reshape((self.num_scenes-1, 3))
-        out_qs  = self.input_array['scenes'][(self.num_scenes-1)*3 : (self.num_scenes-1)*7].reshape((self.num_scenes-1, 4))
+        out_ts  = self.input_array['scenes'][ :(self.num_scenes)*3].reshape((self.num_scenes, 3))
+        out_qs  = self.input_array['scenes'][(self.num_scenes)*3 : (self.num_scenes)*7].reshape((self.num_scenes, 4))
         out_tfs = np.asarray([tfa.compose(t, tfq.quat2mat(q), np.ones(3)) for t,q in zip(out_ts, out_qs)])
-        self.scene_tfs    = np.concatenate((np.eye(4)[np.newaxis,:], out_tfs))
+        self.scene_tfs = out_tfs
         return
 
     def generate_labels(self):
