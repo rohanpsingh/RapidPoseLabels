@@ -68,24 +68,34 @@ This should bring up the main GUI:
 
 ### When object model is NOT available
 1. Click on "Create a new model".
-2. Click on "Load New Image" and manually label all keypoints decided on the object which are visible.
+2. Click on "Load New Image" and manually label all keypoints decided on the object which are visible
 3. Click on "Skip KeyPt" if keypoint is not visible. (**Keypoint labeling is order sensitive**)
-4. To shuffle, click on "Load New Image" again.
-5. Click on "Next Scene" when finished.
-6. Repeat for each scene.
+4. To shuffle, click on "Load New Image" again
+5. Click on "Next Scene" when finished
+6. Repeat for each scene
 7. Click on "Compute"
 
 If manual label was done maintaining the constraints described in the paper, the optimization step should succeed and produce a ```sparse_model.txt``` and ```saved_meta_data.npz``` in the output directory. The ```saved_meta_data.npz``` archive holds data of relative scene transformations and the manually clicked points with their IDs (important for generating the actual labels using ```generate.py``` and evaluation with respect to ground-truth, if available).
 
 ###  When object model is available
-Once ```sparse_model.txt``` has been generated for a particular object, the user might want to reuse the same model for generating labels for a new scene (let's say directory ```05```) . This would require the user to only click on 4-5 points on one RGB image per scene and directly obtain the new labels.
+If you already have a model file for your object (generated through CAD, scanners etc.), follow these steps to obtain ```sparse_model.txt```:
+
+1. Open the model file in Meshlab.
+2. Click on PickPoints (Edit > PickPoints)
+3. Pick 6-10 keypoints on the object arbitrarily
+4. Click "Save" and close
+
+Once ```sparse_model.txt``` has been generated for a particular object, it is easy to generate labels for any scene (let's say directory ```05```). This requires the user to uniquely localize at least 3 points defined in the sparse model in the scene.
 
 1. Launch the GUI
 2. Click on "Use existing model"
-3. Choose a previously generated ```sparse_model.txt```. (A Meshlab *.pp file can also be used in this step, if a CAD model is available)
-4. Follow the same procedure as before.
+3. Choose a previously generated ```sparse_model.txt``` (A Meshlab *.pp file can also be used in this step)
+4. Click on "Load New Image"
+5. Label at least 3 keypoints (that exist in the sparse model file)
+6. Click on "Skip KeyPt" if keypoint is not visible. (**Keypoint labeling is order sensitive**)
+7. Click on "Compute"
 
-Clicking on "Compute" tries to solve an orthogonal Procrustes problem on the given manual clicks and in input sparse model file. This will generate the  ```saved_meta_data.npz``` again for the given scenes, which can be with the ```generate.py``` script to generate the labels.
+"Compute" tries to solve an orthogonal Procrustes problem on the given manual clicks and the input sparse model file. This will generate the  ```saved_meta_data.npz``` again for the given scenes, which can be used with the ```generate.py``` script to generate the labels.
 
 ### To generate labels on raw images
 ```
