@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 
 class SparseModel:
@@ -41,9 +42,10 @@ class SparseModel:
         points = []
         names = []
         with open(file_path, 'r') as in_file:
-            lines = [line.strip().split()[1:] for line in in_file.readlines() if line.strip().find('point')==1]
+            lines = [line.strip() for line in in_file.readlines() if line.strip().find('point')==1]
         for line in lines:
-            dict_ = {name:float(val.strip('"')) for item in line for name,val in [item.strip('/>').split('=')]}
+            line = [re.findall(i + r'=\"[^\"]*\"', line)[0] for i in ['x','y','z','name']]
+            dict_ = {name:float(re.findall("[-+]?\d*\.\d+|\d+", val)[0]) for item in line for name,val in [item.split('=')]}
             points.append([dict_['x'], dict_['y'], dict_['z']])
             names.append(int(dict_['name']))
         #keypoints are unique, so they must be sorted according to ID
