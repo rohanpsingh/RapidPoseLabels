@@ -83,8 +83,12 @@ class Annotations:
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(input_img, contours, 0, (0,255,0), -1)
         #draw bounding-box
-        x,y,w,h = cv2.boundingRect(contours[0])
-        cv2.rectangle(input_img, (x,y), (x+w,y+h), (0,255,0), 2)
+        try:
+            x,y,w,h = cv2.boundingRect(contours[0])
+            cv2.rectangle(input_img, (x,y), (x+w,y+h), (0,255,0), 2)
+        except Exception as e:
+            print("Unexpected error:", e)
+            pass
         cv2.imshow('window', input_img)
         cv2.waitKey(10)
         return
@@ -151,7 +155,6 @@ class Annotations:
         samples = []
         #iterate through a zip of list of scene dirs and the relative scene tfs
         for data_dir_idx, (cur_scene_dir, sce_t) in enumerate(zip(self.list_of_scene_dirs, self.scene_tfs)):
-
             #read the names of image frames in this scene
             with open(os.path.join(self.dataset_path, cur_scene_dir, 'associations.txt'), 'r') as file:
                 img_name_list = file.readlines()
