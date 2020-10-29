@@ -1,14 +1,14 @@
 import os
 import random
-import tkinter as tk
-from tkinter import filedialog
 import numpy as np
 import PIL.Image, PIL.ImageTk
 import cv2
 from app.process import Process
-from app.tk_root import TkRoot
+from app.qt_root import MainWindow
 
-class GUI(TkRoot):
+from PyQt5 import QtGui, QtWidgets
+
+class GUI(MainWindow):
     def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000, scenes=None):
         """
         Constructor for the GUI class.
@@ -62,8 +62,11 @@ class GUI(TkRoot):
         self.current_cam_pos  = []
 
         #run the main loop
+        app = QtWidgets.QApplication([])
+        app.setApplicationName("RapidPoseLabelsApplication")
         super().__init__(window_title, self.width, self.height)
-        super().tkroot_main_loop()
+        super().show()
+        app.exec_()
 
         #GUI mode flags
         self.build_model_mode  = False
@@ -71,8 +74,7 @@ class GUI(TkRoot):
         self.define_grasp_mode = False
 
     def display_cv_image(self, img):
-        self.display_image = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
-        self.canvas.create_image(0, 0, image=self.display_image, anchor=tk.NW)
+        self.display_image = img#PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
 
     def add_click_to_list(self, keypoint_pixel):
         if len(self.scene_gui_input)==self.num_keypoints:
@@ -144,15 +146,17 @@ class GUI(TkRoot):
             cv2.circle(self.current_display, tuple(map(int, keypoint_pixel)), 5, (0,0,255), -1)
 
         #configure state of buttons and canvas
+        pixmap = QtGui.QPixmap.fromImage(self.current_display)
+        self.canvas.setPixmap(pixmap)
         self.display_cv_image(self.current_display)
-        self.canvas.bind('<Button-1>', self.button_click)
-        self.canvas.bind('<Double-Button-1>', self.double_button_click)
-        self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
+        #self.canvas.bind('<Button-1>', self.button_click)
+        #self.canvas.bind('<Double-Button-1>', self.double_button_click)
+        #self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
         self.image_loaded=True
-        self.skip_btn.configure(state=tk.NORMAL)
-        self.reset_btn.configure(state=tk.NORMAL)
-        self.next_scene_btn.configure(state=tk.NORMAL)
-        self.display_btn.configure(state=tk.NORMAL)
+        self.skip_btn.setEnabled(True)
+        self.reset_btn.setEnabled(True)
+        self.next_scene_btn.setEnabled(True)
+        self.display_btn.setEnabled(True)
 
     def btn_func_prev_scene(self):
         """
@@ -188,17 +192,17 @@ class GUI(TkRoot):
         except:
             self.msg_box.configure(text = "Done all scenes.\nPlease quit")
             self.dat_box.configure(text = "")
-            self.load_btn.configure(state=tk.DISABLED)
+            self.load_btn.setEnabled(False)
         self.canvas.create_rectangle(0, 0, self.width, self.height, fill='blue')
         self.canvas.unbind('<Button-1>')
         self.canvas.unbind('<Double-Button-1>')
         self.image_loaded=False
-        self.skip_btn.configure(state=tk.DISABLED)
-        self.reset_btn.configure(state=tk.DISABLED)
-        self.next_scene_btn.configure(state=tk.DISABLED)
-        self.prev_scene_btn.configure(state=tk.NORMAL)
-        self.compute_btn.configure(state=tk.NORMAL)
-        self.display_btn.configure(state=tk.DISABLED)
+        self.skip_btn.setEnabled(False)
+        self.reset_btn.setEnabled(False)
+        self.next_scene_btn.setEnabled(False)
+        self.prev_scene_btn.setEnabled(True)
+        self.compute_btn.setEnabled(True)
+        self.display_btn.setEnabled(False)
 
     def btn_func_compute(self):
         """
@@ -271,5 +275,5 @@ class GUI(TkRoot):
         if file_name:
             self.num_keypoints = 2
             self.main_layout()
-            self.skip_btn.configure(state=tk.DISABLED)
-            self.next_scene_btn.configure(state=tk.DISABLED)
+            self.skip_btn.setEnabled(False)
+            self.next_scene_btn.setEnabled(False)
