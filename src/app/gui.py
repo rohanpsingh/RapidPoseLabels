@@ -86,7 +86,7 @@ class GUI(MainWindow):
         #add the clicked pixel coords, current depth image and current camera pose to list
         self.scene_gui_input.append((keypoint_pixel, self.current_dep_image, self.current_cam_pos))
         list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
-        self.msg_box.configure(text = "Keypoint added:\n{}".format(keypoint_pixel))
+        #self.msg_box.configure(text = "Keypoint added:\n{}".format(keypoint_pixel))
         self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
         self.clicked_pixel = []
 
@@ -116,8 +116,12 @@ class GUI(MainWindow):
         self.clicked_pixel = []
         self.scene_gui_input = []
         list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
-        self.msg_box.configure(text = "Scene reset")
-        self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
+        #self.msg_box.configure(text = "Scene reset")
+        #self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
+        self.keypoint_list.clear()
+
+        # Update status bar
+        self.statusBar().showMessage("Cleared all labels in this scene", 5000)
 
     def btn_func_load(self, value):
         """
@@ -150,14 +154,14 @@ class GUI(MainWindow):
         pixmap = QtGui.QPixmap(rgb_im_path)
         self.canvas.loadPixmap(pixmap)
         self.display_cv_image(self.current_display)
-        #self.canvas.bind('<Button-1>', self.button_click)
-        #self.canvas.bind('<Double-Button-1>', self.double_button_click)
-        #self.msg_box.configure(text = "Loaded image\nfrom scene {}".format(self.cur_scene_dir))
         self.image_loaded=True
         self.skip_btn.setEnabled(True)
         self.reset_btn.setEnabled(True)
         self.next_scene_btn.setEnabled(True)
         self.display_btn.setEnabled(True)
+
+        # Update status bar
+        self.statusBar().showMessage("Loaded image\nfrom scene {}".format(self.cur_scene_dir), 5000)
 
     def btn_func_prev_scene(self):
         """

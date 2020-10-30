@@ -147,13 +147,14 @@ class MainWindow(QtWidgets.QMainWindow):
         right_toolbar.addAction(self.display_btn)
         right_toolbar.addAction(self.quit_btn)
         
+        # Menus on the left
+        self.keypoint_list = QtWidgets.QListWidget()
+        self.keypoint_dock = QtWidgets.QDockWidget("Keypoint List")
+        self.keypoint_dock.setWidget(self.keypoint_list)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.keypoint_dock)
+
         # Create a status bar
         self.setStatusBar(QtWidgets.QStatusBar(self))
-
-        # Menus on the left
-        self.message_box = QtWidgets.QDockWidget("Keypoint List")
-        self.message_box.setWidget(QtWidgets.QListWidget())
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.message_box)
 
     def init_layout(self):
 
