@@ -119,14 +119,15 @@ class GUI(MainWindow):
         self.msg_box.configure(text = "Scene reset")
         self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
 
-    def btn_func_load(self, index=0):
+    def btn_func_load(self, value):
         """
         Function to load an image from the current scene dir.
         """
-        if index:
-            read_indx = int(int(index)*(len(self.img_name_list[:-1]))/1000)
-        else:
-            read_indx = random.randrange(len(self.img_name_list[:-1]))
+        if value==-1:
+            value = random.randrange(1000)
+            self.load_slider.setValue(value)
+        read_indx = int(int(value)*(len(self.img_name_list[:-1]))/1000)
+
         #read an RGB and corresponding depth image at the index
         read_pair = (self.img_name_list[read_indx]).split()
         dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[1])
@@ -146,8 +147,8 @@ class GUI(MainWindow):
             cv2.circle(self.current_display, tuple(map(int, keypoint_pixel)), 5, (0,0,255), -1)
 
         #configure state of buttons and canvas
-        pixmap = QtGui.QPixmap.fromImage(self.current_display)
-        self.canvas.setPixmap(pixmap)
+        pixmap = QtGui.QPixmap(rgb_im_path)
+        self.canvas.loadPixmap(pixmap)
         self.display_cv_image(self.current_display)
         #self.canvas.bind('<Button-1>', self.button_click)
         #self.canvas.bind('<Double-Button-1>', self.double_button_click)

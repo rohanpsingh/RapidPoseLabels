@@ -12,32 +12,22 @@ class QCanvas(QtWidgets.QLabel):
         self.setMinimumSize(1, 1)
 
         self.scale = 1.0
-        self.last_x, self.last_y = None, None
         self.pen_color = QtGui.QColor('#000000')        
 
     def set_pen_color(self, c):
         self.pen_color = QtGui.QColor(c)
 
-    def mouseMoveEvent(self, e):
+    def mousePressEvent(self, e):
         pos = self.transformPos(e.localPos())
-        #pos = e.localPos()
-        if self.last_x is None: # First event.
-            self.last_x = pos.x()
-            self.last_y = pos.y()
-            return # Ignore the first time.
 
         painter = QtGui.QPainter(self.pixmap())
         p = painter.pen()
         p.setWidth(4)
         p.setColor(self.pen_color)
         painter.setPen(p)
-        painter.drawLine(self.last_x, self.last_y, pos.x(), pos.y())
+        painter.drawPoint(pos.x(), pos.y())
         painter.end()
         self.update()
-
-        # Update the origin for next time.
-        self.last_x = pos.x()
-        self.last_y = pos.y()
 
     def transformPos(self, point):
         """Convert from widget-logical coordinates to painter-logical ones."""
@@ -52,9 +42,10 @@ class QCanvas(QtWidgets.QLabel):
         y = (ah - h) / (2 * s) if ah > h else 0
         return QPoint(x, y)
 
-    def mouseReleaseEvent(self, e):
-        self.last_x = None
-        self.last_y = None
+    def loadPixmap(self, pixmap):
+        self.setPixmap(pixmap.scaled(
+            self.width(), self.height(),
+            Qt.KeepAspectRatio))
 
     def resizeEvent(self, event):
         self.setPixmap(self.pixmap().scaled(

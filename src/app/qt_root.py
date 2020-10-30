@@ -71,56 +71,56 @@ class MainWindow(QtWidgets.QMainWindow):
         # Button
         self.load_btn = QtWidgets.QAction('Load')
         self.load_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.load_btn.triggered.connect(lambda:self.btn_func_load())
+        self.load_btn.triggered.connect(lambda x : self.btn_func_load(-1))
         self.load_btn.setStatusTip("Click here to load a new image from current scene.")
         self.load_btn.setEnabled(True)
 
         # Button
         self.skip_btn = QtWidgets.QAction('Skip keypoint')
         self.skip_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.skip_btn.triggered.connect(lambda:self.btn_func_skip())
+        self.skip_btn.triggered.connect(self.btn_func_skip)
         self.skip_btn.setStatusTip("Click here if keypoint is not visible in current scene.")
         self.skip_btn.setEnabled(False)
 
         # Button
         self.reset_btn = QtWidgets.QAction('Scene reset')
         self.reset_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.reset_btn.triggered.connect(lambda:self.btn_func_reset())
+        self.reset_btn.triggered.connect(self.btn_func_reset)
         self.reset_btn.setStatusTip("Click here to clear all labels in current scene.")
         self.reset_btn.setEnabled(False)
         
         # Button
         self.next_scene_btn = QtWidgets.QAction('Next scene')
         self.next_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.next_scene_btn.triggered.connect(lambda:self.btn_func_next_scene())
+        self.next_scene_btn.triggered.connect(self.btn_func_next_scene)
         self.next_scene_btn.setStatusTip("Click here to confirm labels in current scene and move to next.")
         self.next_scene_btn.setEnabled(False)
 
         # Button
         self.prev_scene_btn = QtWidgets.QAction('Previous scene')
         self.prev_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.prev_scene_btn.triggered.connect(lambda:self.btn_func_prev_scene())
+        self.prev_scene_btn.triggered.connect(self.btn_func_prev_scene)
         self.prev_scene_btn.setStatusTip("Click here to go to previous scene.")
         self.prev_scene_btn.setEnabled(False)
 
         # Button
         self.compute_btn = QtWidgets.QAction('Compute')
         self.compute_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.compute_btn.triggered.connect(lambda:self.btn_func_compute())
+        self.compute_btn.triggered.connect(self.btn_func_compute)
         self.compute_btn.setStatusTip("Click here to solve the optimization problem.")
         self.compute_btn.setEnabled(False)
 
         # Button
         self.display_btn = QtWidgets.QAction('Visualize')
         self.display_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.display_btn.triggered.connect(lambda:self.btn_func_display())
+        self.display_btn.triggered.connect(self.btn_func_display)
         self.display_btn.setStatusTip("Click here to visualize the labeled points in 3D.")
         self.display_btn.setEnabled(False)
 
         # Button
         self.quit_btn = QtWidgets.QAction('Quit')
         self.quit_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
-        self.quit_btn.triggered.connect(lambda:self.btn_func_quit())
+        self.quit_btn.triggered.connect(self.btn_func_quit)
         self.quit_btn.setStatusTip("Click here to close the GUI (inputs will not be saved).")
         self.quit_btn.setEnabled(True)
 
@@ -129,7 +129,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_slider.setMinimum(0)
         self.load_slider.setMaximum(999)
         #self.load_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-        self.load_slider.valueChanged.connect(lambda:self.btn_func_load())
+        self.load_slider.sliderMoved.connect(self.btn_func_load)
         self.load_slider.setStatusTip("Slide to load images from the scene.")
         self.load_slider.setEnabled(True)
 
@@ -160,21 +160,21 @@ class MainWindow(QtWidgets.QMainWindow):
         # Button for building a new model
         button1 = QtWidgets.QPushButton('Create a new model')
         button1.toggle()
-        button1.clicked.connect(lambda:self.btn_func_create())
+        button1.clicked.connect(self.btn_func_create)
         button1.setStatusTip("Click here if you do not have a model for you object.")
         button1.setFixedSize(300,50)
 
         # Button for choosing an existing model file
         button2 = QtWidgets.QPushButton('Use existing model')
         button2.toggle()
-        button2.clicked.connect(lambda:self.btn_func_choose())
+        button2.clicked.connect(self.btn_func_choose)
         button2.setStatusTip("Click here if you already have a *.pp model for your object.")
         button2.setFixedSize(300,50)
 
         # Button for defining a grasping point
         button3 = QtWidgets.QPushButton('Define grasp point')
         button3.toggle()
-        button3.clicked.connect(lambda:self.btn_func_grasping())
+        button3.clicked.connect(self.btn_func_grasping)
         button3.setStatusTip("Click here to localize a grasp pose for a known object.")
         button3.setFixedSize(300,50)
         
