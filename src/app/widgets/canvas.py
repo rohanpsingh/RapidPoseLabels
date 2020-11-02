@@ -4,10 +4,10 @@ class QCanvas(QtWidgets.QLabel):
 
     def __init__(self, width, height):
         super().__init__()
-        pixmap = QtGui.QPixmap(width, height)
-        pixmap.fill()
+        self._pixmap = QtGui.QPixmap(width, height)
+        self._pixmap.fill()
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.setPixmap(pixmap.scaled(
+        self.setPixmap(self._pixmap.scaled(
             self.width(), self.height(),
             QtCore.Qt.KeepAspectRatio))
         self.setMinimumSize(1, 1)
@@ -15,6 +15,7 @@ class QCanvas(QtWidgets.QLabel):
         self.scale = 1.0
 
     def mousePressEvent(self, e):
+        self.loadPixmap(self._pixmap)
         pos = self.transformPos(e.localPos())
         painter = QtGui.QPainter(self.pixmap())
         painter.setBrush(QtGui.QBrush(QtGui.QColor(0,255,0)))
@@ -44,11 +45,12 @@ class QCanvas(QtWidgets.QLabel):
         return QtCore.QPoint(x, y)
 
     def loadPixmap(self, pixmap):
-        self.setPixmap(pixmap.scaled(
+        self._pixmap = pixmap
+        self.setPixmap(self._pixmap.scaled(
             self.width(), self.height(),
             QtCore.Qt.KeepAspectRatio))
 
     def resizeEvent(self, event):
-        self.setPixmap(self.pixmap().scaled(
+        self.setPixmap(self._pixmap.scaled(
             self.width(), self.height(),
             QtCore.Qt.KeepAspectRatio))
