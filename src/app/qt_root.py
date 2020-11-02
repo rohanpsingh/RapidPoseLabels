@@ -65,7 +65,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas = QCanvas(self.width, self.height)
         # Create the layout and place widgets in
         widget = self.canvas
-        widget.setAlignment(QtCore.Qt.AlignCenter)
+        #widget.setAlignment(QtCore.Qt.AlignCenter)
         self.setCentralWidget(widget)
 
         # Button
