@@ -1,7 +1,6 @@
 import math
 import open3d as o3d
 import numpy as np
-import itertools
 
 class RegionGrowing:
     def __init__(self, angle_thresh, curv_thresh):
