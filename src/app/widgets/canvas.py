@@ -2,6 +2,8 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 
 class QCanvas(QtWidgets.QWidget):
 
+    newPoint = QtCore.pyqtSignal(QtCore.QPoint)
+
     def __init__(self, width, height):
         super().__init__()
         self._pixmap = QtGui.QPixmap(width, height)
@@ -11,17 +13,18 @@ class QCanvas(QtWidgets.QWidget):
         self.setMinimumSize(1, 1)
 
         self.scale = 1.0
-        self.temporary_points = []
-        self.permanent_points = []
+        self.last_clicked = None
+        self.current_points = []
+        self.locked_points = []
 
     def mousePressEvent(self, e):
         pos = self.transformPos(e.localPos())
-        self.temporary_points = [QtCore.QPoint(pos.x(), pos.y())]
+        self.last_clicked = QtCore.QPoint(pos.x(), pos.y())
         self.update()
 
     def mouseDoubleClickEvent(self, e):
         pos = self.transformPos(e.localPos())
-        self.permanent_points.append(QtCore.QPoint(pos.x(), pos.y()))
+        self.newPoint.emit(QtCore.QPoint(pos.x(), pos.y()))
         self.update()
 
     def transformPos(self, point):
@@ -39,7 +42,9 @@ class QCanvas(QtWidgets.QWidget):
 
     def loadPixmap(self, pixmap):
         self._pixmap = pixmap
-        self.temporary_points, self.permanent_points = [], []
+        self.last_clicked = None
+        self.current_points = []
+        self.locked_points = []
         self.update()
 
     def paintEvent(self, event):
@@ -56,12 +61,13 @@ class QCanvas(QtWidgets.QWidget):
         painter.drawPixmap(0, 0, self._pixmap)
 
         # Draw green points
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(0,255,0)))
-        for point in self.temporary_points:
-            painter.drawEllipse(point, 6, 6)
+        if self.last_clicked:
+            painter.setBrush(QtGui.QBrush(QtGui.QColor(0,255,0)))
+            painter.drawEllipse(self.last_clicked, 6, 6)
+
         # Draw blue points
         painter.setBrush(QtGui.QBrush(QtGui.QColor(0,0,255)))
-        for point in self.permanent_points:
+        for point in list(self.current_points + self.locked_points):
             painter.drawEllipse(point, 6, 6)
 
         painter.end()

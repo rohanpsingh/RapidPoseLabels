@@ -57,12 +57,13 @@ class MainWindow(QtWidgets.QMainWindow):
         pass
 
     def btn_func_quit(self):
-        self.tkroot.destroy()
+        pass
 
     def main_layout(self):
         
         # Label (canvas)
         self.canvas = QCanvas(self.width, self.height)
+        self.canvas.newPoint.connect(self.new_point)
         # Create the layout and place widgets in
         widget = self.canvas
         #widget.setAlignment(QtCore.Qt.AlignCenter)

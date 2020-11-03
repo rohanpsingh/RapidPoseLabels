@@ -6,7 +6,7 @@ import cv2
 from app.process import Process
 from app.qt_root import MainWindow
 
-from PyQt5 import QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class GUI(MainWindow):
     def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000, scenes=None):
@@ -39,13 +39,9 @@ class GUI(MainWindow):
         print("Number of scenes: ", len(list_of_scene_dirs))
         print("List of scenes: ", list_of_scene_dirs)
         self.scene_dir_itr = iter(list_of_scene_dirs)
-        self.cur_scene_dir = next(self.scene_dir_itr)
 
-        #read the entire list of image names and camera trajectory for current scene dir
-        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
-            self.img_name_list = file.readlines()
-        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
-            self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
+        self.cur_scene_dir = next(self.scene_dir_itr)
+        self.read_current_scene()
 
         #set up the Process object
         self.process = Process(dataset_path, output_dir, scale)
@@ -53,9 +49,6 @@ class GUI(MainWindow):
         #member variables
         self.scene_ply_paths = []
         self.scene_gui_input = []
-        self.clicked_pixel = []
-        self.image_loaded=False
-        self.current_display = []
         self.current_rgb_image = []
         self.current_dep_image = []
         self.current_ply_path = []
@@ -73,55 +66,45 @@ class GUI(MainWindow):
         self.model_exist_mode  = False
         self.define_grasp_mode = False
 
-    def display_cv_image(self, img):
-        self.display_image = img#PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(img))
+    def read_current_scene(self):
+        #read the entire list of image names and camera trajectory for current scene dir
+        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
+            self.img_name_list = file.readlines()
+        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
+            self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
 
-    def add_click_to_list(self, keypoint_pixel):
+    def new_point(self, point):
         if len(self.scene_gui_input)==self.num_keypoints:
-            self.msg_box.configure(text = "all keypoints selected")
+            self.statusBar().showMessage("All keypoints selected")
             return
-        if keypoint_pixel==[]: keypoint_pixel = [-1, -1]
-        cv2.circle(self.current_display, tuple(keypoint_pixel), 5, (0,0,255), -1)
-        self.display_cv_image(self.current_display)
-        #add the clicked pixel coords, current depth image and current camera pose to list
-        self.scene_gui_input.append((keypoint_pixel, self.current_dep_image, self.current_cam_pos))
-        list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
-        #self.msg_box.configure(text = "Keypoint added:\n{}".format(keypoint_pixel))
-        self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
-        self.clicked_pixel = []
+        # Add point to canvas
+        self.canvas.current_points.append(point)
+        # Add the point, current depth image and current camera pose to scene
+        self.scene_gui_input.append(([point.x(), point.y()], self.current_dep_image, self.current_cam_pos))
 
-    def button_click(self, event):
-        tmp = self.current_display.copy()
-        cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
-        self.display_cv_image(tmp)
-        self.clicked_pixel = [event.x, event.y]
-
-    def double_button_click(self, event):
-        tmp = self.current_display.copy()
-        cv2.circle(tmp, (event.x, event.y), 3, (0,255,0), -1)
-        self.display_cv_image(tmp)
-        self.clicked_pixel = [event.x, event.y]
-        self.add_click_to_list(self.clicked_pixel)
+        # Update status bar
+        self.statusBar().showMessage("Keypoint added:{}".format((point.x(), point.y()), 5000))
+        # Update keypoint dock widget
+        self.keypoint_list.addItem("KP {}: {}".format(len(self.scene_gui_input), (point.x(), point.y())))
 
     def btn_func_skip(self):
-        self.add_click_to_list([])
+        self.new_point(QtCore.QPoint(-1, -1))
 
     def btn_func_reset(self):
         """
         Function to reset the current scene.
         All selected keypoints for the current scene will be cleared.
         """
-        self.display_cv_image(self.current_rgb_image)
-        self.current_display = self.current_rgb_image.copy()
-        self.clicked_pixel = []
         self.scene_gui_input = []
-        list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
-        #self.msg_box.configure(text = "Scene reset")
-        #self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
-        self.keypoint_list.clear()
+        self.canvas.last_clicked = None
+        self.canvas.current_points = []
+        self.canvas.locked_points = []
+        self.canvas.update()
 
         # Update status bar
         self.statusBar().showMessage("Cleared all labels in this scene", 5000)
+        # Update keypoint dock widget
+        self.keypoint_list.clear()
 
     def btn_func_load(self, value):
         """
@@ -143,18 +126,16 @@ class GUI(MainWindow):
         #and the ply path of the associated scene (required for visualizations)
         self.current_ply_path = os.path.join(self.dataset_path, self.cur_scene_dir, self.cur_scene_dir + '.ply')
 
-        #create a copy (to reset and redraw at any time)
-        self.current_display = self.current_rgb_image.copy()
-        #get projection of keypoints on current image
+        # Get projection of keypoints on current image
         matched = self.process.get_projection(self.scene_gui_input, self.current_cam_pos)
-        for keypoint_pixel in matched:
-            cv2.circle(self.current_display, tuple(map(int, keypoint_pixel)), 5, (0,0,255), -1)
 
-        #configure state of buttons and canvas
+        # Update canvas
         pixmap = QtGui.QPixmap(rgb_im_path)
         self.canvas.loadPixmap(pixmap)
-        self.display_cv_image(self.current_display)
-        self.image_loaded=True
+        self.canvas.locked_points = [QtCore.QPoint(point[0], point[1]) for point in matched]
+        self.canvas.update()
+
+        # Configure state of widgets
         self.skip_btn.setEnabled(True)
         self.reset_btn.setEnabled(True)
         self.next_scene_btn.setEnabled(True)
@@ -175,33 +156,35 @@ class GUI(MainWindow):
         and move to next scene.
         """
         while len(self.scene_gui_input) != self.num_keypoints:
-            self.add_click_to_list([])
+            self.btn_func_skip()
 
         #keypoint pixel coords, depth images and camera poses for this scene
         self.process.list_of_scenes.append(self.scene_gui_input)
         #and scene ply
         self.scene_ply_paths.append(self.current_ply_path)
 
-        self.clicked_pixel = []
         self.scene_gui_input = []
         try:
             self.cur_scene_dir = next(self.scene_dir_itr)
-            list_of_kpt_pixels = [i[0] for i in self.scene_gui_input]
-            self.msg_box.configure(text = "Moving to scene:\n{}".format(self.cur_scene_dir))
-            self.dat_box.configure(text = "Current keypoint list:\n{}".format('\n'.join(map(str, list_of_kpt_pixels))))
-            #read the entire list of image names and camera trajectory for current scene dir
-            with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
-                self.img_name_list = file.readlines()
-            with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
-                self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
+            self.read_current_scene()
+
+            # Update status bar
+            self.statusBar().showMessage("Moving to scene:\n{}".format(self.cur_scene_dir), 5000)
+            # Update keypoint dock widget
+            self.keypoint_list.clear()
         except:
-            self.msg_box.configure(text = "Done all scenes.\nPlease quit")
-            self.dat_box.configure(text = "")
+            # Update status bar
+            self.statusBar().showMessage("Done all scenes.Please quit")
+            # Update keypoint dock widget
+            self.keypoint_list.clear()
+
             self.load_btn.setEnabled(False)
-        self.canvas.create_rectangle(0, 0, self.width, self.height, fill='blue')
-        self.canvas.unbind('<Button-1>')
-        self.canvas.unbind('<Double-Button-1>')
-        self.image_loaded=False
+            self.load_slider.setEnabled(False)
+
+        # Reset the canvas
+        self.canvas.loadPixmap(QtGui.QPixmap())
+
+        # Configure state of widgets
         self.skip_btn.setEnabled(False)
         self.reset_btn.setEnabled(False)
         self.next_scene_btn.setEnabled(False)
