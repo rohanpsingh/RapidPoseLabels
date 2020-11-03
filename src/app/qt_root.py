@@ -14,14 +14,11 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # Set up the MainWindow object at center of screen
         self.setWindowTitle(window_title)
-        self.setGeometry(0,0,880,500)
+        self.setGeometry(0,0,1200,600)
         centerPoint = QtWidgets.QDesktopWidget().availableGeometry().center()
         qtRectangle = self.frameGeometry()
         qtRectangle.moveCenter(centerPoint)
         self.move(qtRectangle.topLeft())
-
-        #image on canvas
-        self.display_image = []
 
         # Initial layout
         self.main_layout()
@@ -59,15 +56,46 @@ class MainWindow(QtWidgets.QMainWindow):
     def btn_func_quit(self):
         pass
 
+    def act_func_zoom_in(self):
+        self.scaleImage(1.1)
+
+    def act_func_zoom_out(self):
+        self.scaleImage(0.9)
+
+    def act_func_normal_size(self):
+        self.canvas.scale = 1.0
+        self.canvas.adjustSize()
+
     def main_layout(self):
         
-        # Label (canvas)
+        # Canvas
         self.canvas = QCanvas(self.width, self.height)
         self.canvas.newPoint.connect(self.new_point)
-        # Create the layout and place widgets in
-        widget = self.canvas
-        #widget.setAlignment(QtCore.Qt.AlignCenter)
-        self.setCentralWidget(widget)
+
+        # Scroll area
+        self.scrollArea = QtWidgets.QScrollArea()
+        self.scrollArea.setBackgroundRole(QtGui.QPalette.Dark)
+        self.scrollArea.setWidget(self.canvas)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setVisible(True)
+
+        # Set central widget
+        self.setCentralWidget(self.scrollArea)
+
+        # Action (zoom in)
+        self.zoom_in_act = QtWidgets.QAction("Zoom &In (10%)", self, shortcut="Ctrl++")
+        self.zoom_in_act.triggered.connect(self.act_func_zoom_in)
+        self.zoom_in_act.setEnabled(True)
+
+        # Action (zoom out)
+        self.zoom_out_act = QtWidgets.QAction("Zoom &Out (10%)", self, shortcut="Ctrl+-")
+        self.zoom_out_act.triggered.connect(self.act_func_zoom_out)
+        self.zoom_out_act.setEnabled(True)
+
+        # Action (normal size)
+        self.normal_size_act = QtWidgets.QAction("&Normal Size", self, shortcut="Ctrl+0")
+        self.normal_size_act.triggered.connect(self.act_func_normal_size)
+        self.normal_size_act.setEnabled(True)
 
         # Button
         self.load_btn = QtWidgets.QAction('Load')
@@ -147,6 +175,9 @@ class MainWindow(QtWidgets.QMainWindow):
         right_toolbar.addAction(self.compute_btn)
         right_toolbar.addAction(self.display_btn)
         right_toolbar.addAction(self.quit_btn)
+        right_toolbar.addAction(self.zoom_in_act)
+        right_toolbar.addAction(self.zoom_out_act)
+        right_toolbar.addAction(self.normal_size_act)
         
         # Menus on the left
         self.keypoint_list = QtWidgets.QListWidget()
@@ -192,3 +223,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create a status bar
         self.setStatusBar(QtWidgets.QStatusBar(self))
 
+    def scaleImage(self, factor):
+        self.canvas.scale *= factor
+        self.canvas.adjustSize()
+        self.canvas.update()
+
+        self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor)
+        self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor)
+
+    def adjustScrollBar(self, scrollBar, factor):
+        scrollBar.setValue(int(factor * scrollBar.value()
+                               + ((factor - 1) * scrollBar.pageStep() / 2)))

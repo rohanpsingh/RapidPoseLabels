@@ -8,9 +8,6 @@ class QCanvas(QtWidgets.QWidget):
         super().__init__()
         self._pixmap = QtGui.QPixmap(width, height)
         self._pixmap.fill()
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        #self.setPixmap(self._pixmap.scaled(self.width(), self.height(),QtCore.Qt.KeepAspectRatio))
-        self.setMinimumSize(1, 1)
 
         self.scale = 1.0
         self.last_clicked = None
@@ -71,3 +68,11 @@ class QCanvas(QtWidgets.QWidget):
             painter.drawEllipse(point, 6, 6)
 
         painter.end()
+
+    def sizeHint(self):
+        return self.minimumSizeHint()
+
+    def minimumSizeHint(self):
+        if self._pixmap:
+            return self.scale * self._pixmap.size()
+        return super(QCanvas, self).minimumSizeHint()
