@@ -3,6 +3,8 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 class QCanvas(QtWidgets.QWidget):
 
     newPoint = QtCore.pyqtSignal(QtCore.QPoint)
+    zoomRequest = QtCore.pyqtSignal(int, QtCore.QPoint)
+    scrollRequest = QtCore.pyqtSignal(int, int)
 
     def __init__(self, width, height):
         super().__init__()
@@ -23,6 +25,16 @@ class QCanvas(QtWidgets.QWidget):
         pos = self.transformPos(e.localPos())
         self.newPoint.emit(QtCore.QPoint(pos.x(), pos.y()))
         self.update()
+
+    def wheelEvent(self, e):
+        mods = e.modifiers()
+        delta = e.angleDelta()
+        if QtCore.Qt.ControlModifier == int(mods):
+            self.zoomRequest.emit(delta.y(), e.pos())
+        else:
+            self.scrollRequest.emit(delta.x(), QtCore.Qt.Horizontal)
+            self.scrollRequest.emit(delta.y(), QtCore.Qt.Vertical)
+        e.accept()
 
     def transformPos(self, point):
         """Convert from widget-logical coordinates to painter-logical ones."""

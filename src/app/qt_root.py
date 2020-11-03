@@ -67,10 +67,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.adjustSize()
 
     def main_layout(self):
-        
         # Canvas
         self.canvas = QCanvas(self.width, self.height)
         self.canvas.newPoint.connect(self.new_point)
+        self.canvas.zoomRequest.connect(self.zoom_request)
+        self.canvas.scrollRequest.connect(self.scroll_request)
 
         # Scroll area
         self.scrollArea = QtWidgets.QScrollArea()
@@ -223,14 +224,40 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create a status bar
         self.setStatusBar(QtWidgets.QStatusBar(self))
 
+    def scroll_request(self, delta, orientation):
+        # Scroll bars move with mouse wheel
+        units = -delta * 0.1
+        bar = self.scrollArea.verticalScrollBar()
+        value = bar.value() + bar.singleStep() * units
+        bar.setValue(value)
+
+    def zoom_request(self, delta, pos):
+        # Scale the canvas
+        canvas_width_old = self.canvas.width()
+        scale = 0.9 if delta < 0 else 1.1
+        self.canvas.scale *= scale
+        self.canvas.adjustSize()
+
+        # Adjust the scroll bars to follow mouse position
+        canvas_width_new = self.canvas.width()
+        if canvas_width_old != canvas_width_new:
+            canvas_scale_factor = canvas_width_new / canvas_width_old
+
+            x_shift = round(pos.x() * canvas_scale_factor) - pos.x()
+            y_shift = round(pos.y() * canvas_scale_factor) - pos.y()
+
+            self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), shift=x_shift)
+            self.adjustScrollBar(self.scrollArea.verticalScrollBar(), shift=y_shift)
+
     def scaleImage(self, factor):
         self.canvas.scale *= factor
         self.canvas.adjustSize()
         self.canvas.update()
 
-        self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor)
-        self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor)
+        self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor=factor)
+        self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor=factor)
 
-    def adjustScrollBar(self, scrollBar, factor):
+    def adjustScrollBar(self, scrollBar, factor=1, shift=0):
         scrollBar.setValue(int(factor * scrollBar.value()
                                + ((factor - 1) * scrollBar.pageStep() / 2)))
+        scrollBar.setValue(scrollBar.value() + shift)
