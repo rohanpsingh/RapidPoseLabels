@@ -6,10 +6,9 @@ class QCanvas(QtWidgets.QWidget):
     zoomRequest = QtCore.pyqtSignal(int, QtCore.QPoint)
     scrollRequest = QtCore.pyqtSignal(int, int)
 
-    def __init__(self, width, height):
+    def __init__(self):
         super().__init__()
-        self._pixmap = QtGui.QPixmap(width, height)
-        self._pixmap.fill()
+        self._pixmap = QtGui.QPixmap()
 
         self.scale = 1.0
         self.last_clicked = None
