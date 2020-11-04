@@ -1,7 +1,5 @@
 import os
 import random
-import numpy as np
-import PIL.Image, PIL.ImageTk
 import cv2
 from app.process import Process
 from app.qt_root import MainWindow
