@@ -38,15 +38,13 @@ class GUI(MainWindow):
         list_of_scene_dirs.sort()
         print("Number of scenes: ", len(list_of_scene_dirs))
         print("List of scenes: ", list_of_scene_dirs)
-        self.scene_dir_itr = iter(list_of_scene_dirs)
-
-        self.cur_scene_dir = next(self.scene_dir_itr)
-        self.read_current_scene()
+        self.scene_dir_dict = {idx: item for idx, item in enumerate(list_of_scene_dirs)}
 
         #set up the Process object
         self.process = Process(dataset_path, output_dir, scale)
 
         #member variables
+        self.cur_scene_id = -1
         self.scene_ply_paths = []
         self.scene_gui_input = []
         self.current_rgb_image = []
@@ -58,6 +56,13 @@ class GUI(MainWindow):
         app = QtWidgets.QApplication([])
         app.setApplicationName("RapidPoseLabelsApplication")
         super().__init__(window_title, self.width, self.height)
+
+        # List the scenes in dock window
+        for key, val in self.scene_dir_dict.items():
+            item = QtWidgets.QListWidgetItem("scene {}: {}".format(key, os.path.join(self.dataset_path, val)))
+            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
+            self.scene_list.addItem(item)
+
         super().show()
         app.exec_()
 
@@ -67,6 +72,7 @@ class GUI(MainWindow):
         self.define_grasp_mode = False
 
     def read_current_scene(self):
+        self.cur_scene_dir = self.scene_dir_dict[self.cur_scene_id]
         #read the entire list of image names and camera trajectory for current scene dir
         with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
             self.img_name_list = file.readlines()
@@ -165,21 +171,26 @@ class GUI(MainWindow):
 
         self.scene_gui_input = []
         try:
-            self.cur_scene_dir = next(self.scene_dir_itr)
+            self.cur_scene_id +=1
             self.read_current_scene()
-
+            # Configure state of widgets
+            self.load_btn.setEnabled(True)
+            self.load_slider.setEnabled(True)
             # Update status bar
             self.statusBar().showMessage("Moving to scene:\n{}".format(self.cur_scene_dir), 5000)
             # Update keypoint dock widget
             self.keypoint_list.clear()
-        except:
+            # Update scene dock widget
+            item = self.scene_list.item(self.cur_scene_id)
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
+        except KeyError:
+            # Confugre state of wigets
+            self.load_btn.setEnabled(False)
+            self.load_slider.setEnabled(False)
             # Update status bar
             self.statusBar().showMessage("Done all scenes.Please quit")
             # Update keypoint dock widget
             self.keypoint_list.clear()
-
-            self.load_btn.setEnabled(False)
-            self.load_slider.setEnabled(False)
 
         # Reset the canvas
         self.canvas.loadPixmap(QtGui.QPixmap())

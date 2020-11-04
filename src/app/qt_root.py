@@ -68,7 +68,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def main_layout(self):
         # Canvas
-        self.canvas = QCanvas(self.width, self.height)
+        self.canvas = QCanvas()
         self.canvas.newPoint.connect(self.new_point)
         self.canvas.zoomRequest.connect(self.zoom_request)
         self.canvas.scrollRequest.connect(self.scroll_request)
@@ -103,7 +103,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.load_btn.triggered.connect(lambda x : self.btn_func_load(-1))
         self.load_btn.setStatusTip("Click here to load a new image from current scene.")
-        self.load_btn.setEnabled(True)
+        self.load_btn.setEnabled(False)
 
         # Button
         self.skip_btn = QtWidgets.QAction('Skip keypoint')
@@ -124,7 +124,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.next_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.next_scene_btn.triggered.connect(self.btn_func_next_scene)
         self.next_scene_btn.setStatusTip("Click here to confirm labels in current scene and move to next.")
-        self.next_scene_btn.setEnabled(False)
+        self.next_scene_btn.setEnabled(True)
 
         # Button
         self.prev_scene_btn = QtWidgets.QAction('Previous scene')
@@ -161,7 +161,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.load_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.load_slider.sliderMoved.connect(self.btn_func_load)
         self.load_slider.setStatusTip("Slide to load images from the scene.")
-        self.load_slider.setEnabled(True)
+        self.load_slider.setEnabled(False)
 
         # Toolbar on the right
         right_toolbar = QToolMenu("Tool Menu")
@@ -185,6 +185,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.keypoint_dock = QtWidgets.QDockWidget("Keypoint List")
         self.keypoint_dock.setWidget(self.keypoint_list)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.keypoint_dock)
+
+        self.scene_list = QtWidgets.QListWidget()
+        #self.scene_list.setEnabled(False)
+        self.scene_dock = QtWidgets.QDockWidget("Scenes")
+        self.scene_dock.setWidget(self.scene_list)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.scene_dock)
 
         # Create a status bar
         self.setStatusBar(QtWidgets.QStatusBar(self))
