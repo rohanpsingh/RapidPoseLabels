@@ -17,13 +17,15 @@ class QCanvas(QtWidgets.QWidget):
 
     def mousePressEvent(self, e):
         pos = self.transformPos(e.localPos())
-        self.last_clicked = QtCore.QPoint(pos.x(), pos.y())
-        self.update()
+        if not self.outOfPixmap(pos):
+            self.last_clicked = QtCore.QPoint(pos.x(), pos.y())
+            self.update()
 
     def mouseDoubleClickEvent(self, e):
         pos = self.transformPos(e.localPos())
-        self.newPoint.emit(QtCore.QPoint(pos.x(), pos.y()))
-        self.update()
+        if not self.outOfPixmap(pos):
+            self.newPoint.emit(QtCore.QPoint(pos.x(), pos.y()))
+            self.update()
 
     def wheelEvent(self, e):
         mods = e.modifiers()
@@ -87,3 +89,8 @@ class QCanvas(QtWidgets.QWidget):
         if self._pixmap:
             return self.scale * self._pixmap.size()
         return super(QCanvas, self).minimumSizeHint()
+
+    def outOfPixmap(self, p):
+        w, h = self._pixmap.width(), self._pixmap.height()
+        return not (0 <= p.x() <= w - 1 and 0 <= p.y() <= h - 1)
+
