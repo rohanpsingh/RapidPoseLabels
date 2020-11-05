@@ -54,7 +54,7 @@ class MainWindow(QtWidgets.QMainWindow):
         pass
 
     def btn_func_quit(self):
-        pass
+        self.close()
 
     def act_func_zoom_in(self):
         self.scaleImage(1.1)
@@ -148,7 +148,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.display_btn.setEnabled(False)
 
         # Button
-        self.quit_btn = QtWidgets.QAction('Quit')
+        self.quit_btn = QtWidgets.QAction('Quit', shortcut="Alt+Q")
         self.quit_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.quit_btn.triggered.connect(self.btn_func_quit)
         self.quit_btn.setStatusTip("Click here to close the GUI (inputs will not be saved).")
@@ -267,3 +267,13 @@ class MainWindow(QtWidgets.QMainWindow):
         scrollBar.setValue(int(factor * scrollBar.value()
                                + ((factor - 1) * scrollBar.pageStep() / 2)))
         scrollBar.setValue(scrollBar.value() + shift)
+
+    def closeEvent(self, event):
+        quit_msg = "All labels will be lost. Are you sure you want to quit?"
+        reply = QtWidgets.QMessageBox.question(self, 'Message',
+                         quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
