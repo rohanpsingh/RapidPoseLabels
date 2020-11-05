@@ -99,7 +99,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.normal_size_act.setEnabled(True)
 
         # Button
-        self.load_btn = QtWidgets.QAction('Load')
+        self.load_btn = QtWidgets.QAction('Load', shortcut="Space")
         self.load_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.load_btn.triggered.connect(lambda x : self.btn_func_load(-1))
         self.load_btn.setStatusTip("Click here to load a new image from current scene.")
