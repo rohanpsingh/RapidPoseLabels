@@ -106,14 +106,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_btn.setEnabled(False)
 
         # Button
-        self.skip_btn = QtWidgets.QAction('Skip keypoint')
+        self.skip_btn = QtWidgets.QAction('Skip keypoint', shortcut="Ctrl+Tab")
         self.skip_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.skip_btn.triggered.connect(self.btn_func_skip)
         self.skip_btn.setStatusTip("Click here if keypoint is not visible in current scene.")
         self.skip_btn.setEnabled(False)
 
         # Button
-        self.reset_btn = QtWidgets.QAction('Scene reset')
+        self.reset_btn = QtWidgets.QAction('Scene reset', shortcut="Ctrl+R")
         self.reset_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.reset_btn.triggered.connect(self.btn_func_reset)
         self.reset_btn.setStatusTip("Click here to clear all labels in current scene.")
