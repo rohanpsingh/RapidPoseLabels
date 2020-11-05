@@ -46,7 +46,6 @@ class GUI(MainWindow):
         self._count = -1
 
         self.scene_ply_paths = []
-        self.labels = []
         self.current_rgb_image = []
         self.current_dep_image = []
         self.current_ply_path = []
@@ -72,7 +71,7 @@ class GUI(MainWindow):
         app.exec_()
 
         #GUI mode flags
-        self.build_model_mode  = False
+        self.build_model_mode  = True
         self.model_exist_mode  = False
         self.define_grasp_mode = False
 
@@ -100,13 +99,13 @@ class GUI(MainWindow):
         return True
 
     def new_point(self, point):
-        if len(self.labels)==self.num_keypoints:
+        if len(self.scenes[self._count].labels)==self.num_keypoints:
             self.statusBar().showMessage("All keypoints selected")
             return
+
         # Add point to canvas
         self.canvas.current_points.append(point)
         # Add the point, current depth image and current camera pose to scene
-        self.labels.append(([point.x(), point.y()], self.current_dep_image, self.current_cam_pos))
         label = Label([point.x(), point.y()], self.current_dep_image, self.current_cam_pos)
         self.scenes[self._count].labels.append(label)
 
@@ -122,7 +121,6 @@ class GUI(MainWindow):
         Function to reset the current scene.
         All selected keypoints for the current scene will be cleared.
         """
-        self.labels = []
         self.scenes[self._count].labels = []
         self.canvas.last_clicked = None
         self.canvas.current_points = []
@@ -151,7 +149,9 @@ class GUI(MainWindow):
         self.current_cam_pos = self.cam_pose_list[read_indx]
 
         # Get projection of keypoints on current image
-        matched = self.process.get_projection(self.labels, self.current_cam_pos)
+        matched = self.process.get_projection(
+            self.scenes[self._count].labels, self.current_cam_pos
+        )
 
         # Update canvas
         pixmap = QtGui.QPixmap(rgb_im_path)
@@ -181,15 +181,13 @@ class GUI(MainWindow):
         Function to lock labeled keypoints in current scene
         and move to next scene.
         """
-        while len(self.labels) != self.num_keypoints:
-            self.btn_func_skip()
+        # Do not run this block on startup
+        if not self._count < 0:
+            while len(self.scenes[self._count].labels) != self.num_keypoints:
+                self.btn_func_skip()
+            #keypoint pixel coords, depth images and camera poses for this scene
+            self.scene_ply_paths.append(self.current_ply_path)
 
-        #keypoint pixel coords, depth images and camera poses for this scene
-        self.process.list_of_scenes.append(self.labels)
-        #and scene ply
-        self.scene_ply_paths.append(self.current_ply_path)
-
-        self.labels = []
         self._count+=1
         if self._count < len(self.scenes):
             # Read current scene
@@ -231,11 +229,12 @@ class GUI(MainWindow):
         Function to perform the optimization/procrustes step.
         """
         #2D-to-3D conversion
-        keypoint_pos = self.process.convert_2d_to_3d(self.process.list_of_scenes)
+        scenes_labels = [scene.labels for scene in self.scenes][:self._count]
+        keypoint_pos = self.process.convert_2d_to_3d(scenes_labels)
         #transform points to origins of respective scene
-        self.process.transform_points(keypoint_pos, self.process.list_of_scenes)
+        self.process.transform_points(keypoint_pos, scenes_labels)
         #final computation step
-        if self.build_model_mode:
+        if True:
             res, obj = self.process.compute(False)
             #visualize the generated object model in first scene
             self.process.visualize_points_in_scene(self.scene_ply_paths[0], obj)
@@ -250,9 +249,9 @@ class GUI(MainWindow):
         and visualize them in the scene.
         """
         #2D-to-3D conversion
-        keypoint_pos = self.process.convert_2d_to_3d([self.labels])
+        keypoint_pos = self.process.convert_2d_to_3d([self.scenes[self._count].labels])
         #transform points to origins of respective scene
-        self.process.transform_points(keypoint_pos, [self.labels])
+        self.process.transform_points(keypoint_pos, [self.scenes[self._count].labels])
         #visualize the labeled keypoints in scene
         obj = []
         if not self.process.scene_kpts==[]:
