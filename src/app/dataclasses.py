@@ -17,4 +17,5 @@ class Scene:
     index: int
     name: str
     path: os.PathLike
+    mesh: os.PathLike
     labels: List[Label]
