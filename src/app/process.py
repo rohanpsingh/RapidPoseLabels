@@ -88,6 +88,8 @@ class Process:
                                    np.ones(3))
         point_positions = []
         for (pt, depth, pose) in inputs:
+            if not isinstance(depth, np.ndarray) or not isinstance(pose, list):
+                continue
             pt3d_z = (depth[pt[1], pt[0]])*(1.0/self.scale)
             if pt==[-1, -1] or pt3d_z==0:
                 continue
@@ -102,8 +104,11 @@ class Process:
         #project 3D points to 2D image plane
         rvec = cv2.Rodrigues(np.eye(3))[0]
         tvec = np.zeros(3)
-        keypoint_pixels = cv2.projectPoints(np.array(point_positions), rvec, tvec, self.camera_matrix, None)[0]
-        return keypoint_pixels.transpose(1,0,2)[0]
+        try:
+            keypoint_pixels = cv2.projectPoints(np.array(point_positions), rvec, tvec, self.camera_matrix, None)[0]
+            return keypoint_pixels.transpose(1,0,2)[0]
+        except Exception as e:
+            return np.array([])
 
     def visualize_points_in_scene(self, scene_ply_path, scene_obj_kpts):
         """
