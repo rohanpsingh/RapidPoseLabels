@@ -84,17 +84,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.scrollArea)
 
         # Action (zoom in)
-        self.zoom_in_act = QtWidgets.QAction("Zoom &In (10%)", self, shortcut="Ctrl++")
+        self.zoom_in_act = QtWidgets.QAction("Zoom &In (10%)", shortcut="Ctrl++")
         self.zoom_in_act.triggered.connect(self.act_func_zoom_in)
         self.zoom_in_act.setEnabled(True)
 
         # Action (zoom out)
-        self.zoom_out_act = QtWidgets.QAction("Zoom &Out (10%)", self, shortcut="Ctrl+-")
+        self.zoom_out_act = QtWidgets.QAction("Zoom &Out (10%)", shortcut="Ctrl+-")
         self.zoom_out_act.triggered.connect(self.act_func_zoom_out)
         self.zoom_out_act.setEnabled(True)
 
         # Action (normal size)
-        self.normal_size_act = QtWidgets.QAction("&Normal Size", self, shortcut="Ctrl+0")
+        self.normal_size_act = QtWidgets.QAction("&Normal Size", shortcut="Ctrl+0")
         self.normal_size_act.triggered.connect(self.act_func_normal_size)
         self.normal_size_act.setEnabled(True)
 
@@ -120,14 +120,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.reset_btn.setEnabled(False)
         
         # Button
-        self.next_scene_btn = QtWidgets.QAction('Next scene')
+        self.next_scene_btn = QtWidgets.QAction('Next scene', shortcut="Ctrl+N")
         self.next_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.next_scene_btn.triggered.connect(self.btn_func_next_scene)
         self.next_scene_btn.setStatusTip("Click here to confirm labels in current scene and move to next.")
         self.next_scene_btn.setEnabled(True)
 
         # Button
-        self.prev_scene_btn = QtWidgets.QAction('Previous scene')
+        self.prev_scene_btn = QtWidgets.QAction('Previous scene', shortcut="Ctrl+P")
         self.prev_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
         self.prev_scene_btn.triggered.connect(self.btn_func_prev_scene)
         self.prev_scene_btn.setStatusTip("Click here to go to previous scene.")
