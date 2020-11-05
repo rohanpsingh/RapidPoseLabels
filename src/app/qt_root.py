@@ -85,71 +85,74 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Action (zoom in)
         self.zoom_in_act = QtWidgets.QAction("Zoom &In (10%)", shortcut="Ctrl++")
+        self.zoom_in_act.setIcon(QtGui.QIcon.fromTheme("zoom-in"))
         self.zoom_in_act.triggered.connect(self.act_func_zoom_in)
         self.zoom_in_act.setEnabled(True)
 
         # Action (zoom out)
         self.zoom_out_act = QtWidgets.QAction("Zoom &Out (10%)", shortcut="Ctrl+-")
+        self.zoom_out_act.setIcon(QtGui.QIcon.fromTheme("zoom-out"))
         self.zoom_out_act.triggered.connect(self.act_func_zoom_out)
         self.zoom_out_act.setEnabled(True)
 
         # Action (normal size)
         self.normal_size_act = QtWidgets.QAction("&Normal Size", shortcut="Ctrl+0")
+        self.normal_size_act.setIcon(QtGui.QIcon.fromTheme("zoom-original"))
         self.normal_size_act.triggered.connect(self.act_func_normal_size)
         self.normal_size_act.setEnabled(True)
 
         # Button
         self.load_btn = QtWidgets.QAction('Load', shortcut="Space")
-        self.load_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.load_btn.setIcon(QtGui.QIcon(ICONS_DIR + "image-sunset.png"))
         self.load_btn.triggered.connect(lambda x : self.btn_func_load(-1))
         self.load_btn.setStatusTip("Click here to load a new image from current scene.")
         self.load_btn.setEnabled(False)
 
         # Button
         self.skip_btn = QtWidgets.QAction('Skip keypoint', shortcut="Ctrl+Tab")
-        self.skip_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.skip_btn.setIcon(QtGui.QIcon(ICONS_DIR + "minus.png"))
         self.skip_btn.triggered.connect(self.btn_func_skip)
         self.skip_btn.setStatusTip("Click here if keypoint is not visible in current scene.")
         self.skip_btn.setEnabled(False)
 
         # Button
         self.reset_btn = QtWidgets.QAction('Scene reset', shortcut="Ctrl+R")
-        self.reset_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.reset_btn.setIcon(QtGui.QIcon(ICONS_DIR + "exclamation.png"))
         self.reset_btn.triggered.connect(self.btn_func_reset)
         self.reset_btn.setStatusTip("Click here to clear all labels in current scene.")
         self.reset_btn.setEnabled(False)
         
         # Button
         self.next_scene_btn = QtWidgets.QAction('Next scene', shortcut="Ctrl+N")
-        self.next_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.next_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "arrow.png"))
         self.next_scene_btn.triggered.connect(self.btn_func_next_scene)
         self.next_scene_btn.setStatusTip("Click here to confirm labels in current scene and move to next.")
         self.next_scene_btn.setEnabled(True)
 
         # Button
         self.prev_scene_btn = QtWidgets.QAction('Previous scene', shortcut="Ctrl+P")
-        self.prev_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.prev_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "arrow-180.png"))
         self.prev_scene_btn.triggered.connect(self.btn_func_prev_scene)
         self.prev_scene_btn.setStatusTip("Click here to go to previous scene.")
         self.prev_scene_btn.setEnabled(False)
 
         # Button
         self.compute_btn = QtWidgets.QAction('Compute')
-        self.compute_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.compute_btn.setIcon(QtGui.QIcon(ICONS_DIR + "tick.png"))
         self.compute_btn.triggered.connect(self.btn_func_compute)
         self.compute_btn.setStatusTip("Click here to solve the optimization problem.")
         self.compute_btn.setEnabled(False)
 
         # Button
         self.display_btn = QtWidgets.QAction('Visualize')
-        self.display_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.display_btn.setIcon(QtGui.QIcon(ICONS_DIR + "color.png"))
         self.display_btn.triggered.connect(self.btn_func_display)
         self.display_btn.setStatusTip("Click here to visualize the labeled points in 3D.")
         self.display_btn.setEnabled(False)
 
         # Button
         self.quit_btn = QtWidgets.QAction('Quit', shortcut="Alt+Q")
-        self.quit_btn.setIcon(QtGui.QIcon(ICONS_DIR + "new.png"))
+        self.quit_btn.setIcon(QtGui.QIcon(ICONS_DIR + "cross-circle.png"))
         self.quit_btn.triggered.connect(self.btn_func_quit)
         self.quit_btn.setStatusTip("Click here to close the GUI (inputs will not be saved).")
         self.quit_btn.setEnabled(True)
