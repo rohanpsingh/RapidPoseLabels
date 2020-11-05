@@ -73,12 +73,14 @@ class QCanvas(QtWidgets.QWidget):
         # Draw green points
         if self.last_clicked:
             painter.setBrush(QtGui.QBrush(QtGui.QColor(0,255,0)))
-            painter.drawEllipse(self.last_clicked, 6, 6)
+            if not self.outOfPixmap(self.last_clicked):
+                painter.drawEllipse(self.last_clicked, 6, 6)
 
         # Draw blue points
         painter.setBrush(QtGui.QBrush(QtGui.QColor(0,0,255)))
         for point in list(self.current_points + self.locked_points):
-            painter.drawEllipse(point, 6, 6)
+            if not self.outOfPixmap(point):
+                painter.drawEllipse(point, 6, 6)
 
         painter.end()
 
