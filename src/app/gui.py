@@ -1,10 +1,12 @@
 import os
 import random
 import cv2
+import numpy as np
+from PyQt5 import QtCore, QtGui, QtWidgets
+
 from app.process import Process
 from app.qt_root import MainWindow
-
-from PyQt5 import QtCore, QtGui, QtWidgets
+from app.dataclasses import Label, Scene
 
 class GUI(MainWindow):
     def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000, scenes=None):
@@ -36,19 +38,22 @@ class GUI(MainWindow):
         list_of_scene_dirs.sort()
         print("Number of scenes: ", len(list_of_scene_dirs))
         print("List of scenes: ", list_of_scene_dirs)
-        self.scene_dir_dict = {idx: item for idx, item in enumerate(list_of_scene_dirs)}
 
         #set up the Process object
         self.process = Process(dataset_path, output_dir, scale)
 
-        #member variables
-        self.cur_scene_id = -1
+        # Counter for scenes
+        self._count = -1
+
         self.scene_ply_paths = []
-        self.scene_gui_input = []
+        self.labels = []
         self.current_rgb_image = []
         self.current_dep_image = []
         self.current_ply_path = []
         self.current_cam_pos  = []
+
+        self.scenes = [Scene(idx, item, os.path.join(self.dataset_path, item), [])
+                       for idx, item in enumerate(list_of_scene_dirs)]
 
         #run the main loop
         app = QtWidgets.QApplication([])
@@ -56,8 +61,10 @@ class GUI(MainWindow):
         super().__init__(window_title, self.width, self.height)
 
         # List the scenes in dock window
-        for key, val in self.scene_dir_dict.items():
-            item = QtWidgets.QListWidgetItem("scene {}: {}".format(key, os.path.join(self.dataset_path, val)))
+        for scene in self.scenes:
+            item = QtWidgets.QListWidgetItem(
+                "scene {}: {}".format(scene.index, scene.path)
+            )
             item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
             self.scene_list.addItem(item)
 
@@ -69,27 +76,43 @@ class GUI(MainWindow):
         self.model_exist_mode  = False
         self.define_grasp_mode = False
 
+    def update_keypoint_dock(self):
+        self.keypoint_list.clear()
+        points = [item.pixel for item in self.scenes[self._count].labels]
+        for index, point in enumerate(points):
+            self.keypoint_list.addItem(
+                "KP {}: {}".format(index, tuple(point))
+            )
+
     def read_current_scene(self):
-        self.cur_scene_dir = self.scene_dir_dict[self.cur_scene_id]
-        #read the entire list of image names and camera trajectory for current scene dir
-        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'associations.txt'), 'r') as file:
-            self.img_name_list = file.readlines()
-        with open(os.path.join(self.dataset_path, self.cur_scene_dir, 'camera.poses'), 'r') as file:
-            self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
+        try:
+            cur_scene_dir = self.scenes[self._count].path
+            # Read image names
+            with open(os.path.join(cur_scene_dir, 'associations.txt'), 'r') as file:
+                self.img_name_list = file.readlines()
+            # Read camera trajectory
+            with open(os.path.join(cur_scene_dir, 'camera.poses'), 'r') as file:
+                self.cam_pose_list = [list(map(float, line.split()[1:])) for line in file.readlines()]
+            # PLY path of current scene (required for visualizations)
+            self.current_ply_path = os.path.join(cur_scene_dir, self.scenes[self._count].name + '.ply')
+        except:
+            return False
+        return True
 
     def new_point(self, point):
-        if len(self.scene_gui_input)==self.num_keypoints:
+        if len(self.labels)==self.num_keypoints:
             self.statusBar().showMessage("All keypoints selected")
             return
         # Add point to canvas
         self.canvas.current_points.append(point)
         # Add the point, current depth image and current camera pose to scene
-        self.scene_gui_input.append(([point.x(), point.y()], self.current_dep_image, self.current_cam_pos))
+        self.labels.append(([point.x(), point.y()], self.current_dep_image, self.current_cam_pos))
+        label = Label([point.x(), point.y()], self.current_dep_image, self.current_cam_pos)
+        self.scenes[self._count].labels.append(label)
 
-        # Update status bar
+        # Update status bar and dock
         self.statusBar().showMessage("Keypoint added:{}".format((point.x(), point.y()), 5000))
-        # Update keypoint dock widget
-        self.keypoint_list.addItem("KP {}: {}".format(len(self.scene_gui_input), (point.x(), point.y())))
+        self.update_keypoint_dock()
 
     def btn_func_skip(self):
         self.new_point(QtCore.QPoint(-1, -1))
@@ -99,16 +122,16 @@ class GUI(MainWindow):
         Function to reset the current scene.
         All selected keypoints for the current scene will be cleared.
         """
-        self.scene_gui_input = []
+        self.labels = []
+        self.scenes[self._count].labels = []
         self.canvas.last_clicked = None
         self.canvas.current_points = []
         self.canvas.locked_points = []
         self.canvas.update()
 
-        # Update status bar
+        # Update status bar and dock
         self.statusBar().showMessage("Cleared all labels in this scene", 5000)
-        # Update keypoint dock widget
-        self.keypoint_list.clear()
+        self.update_keypoint_dock()
 
     def btn_func_load(self, value):
         """
@@ -119,19 +142,16 @@ class GUI(MainWindow):
             self.load_slider.setValue(value)
         read_indx = int(int(value)*(len(self.img_name_list[:-1]))/1000)
 
-        #read an RGB and corresponding depth image at the index
+        # Read the RGB, Depth image and Camera pose at the index
         read_pair = (self.img_name_list[read_indx]).split()
-        dep_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[1])
-        rgb_im_path = os.path.join(self.dataset_path, self.cur_scene_dir, read_pair[3])
+        dep_im_path = os.path.join(self.scenes[self._count].path, read_pair[1])
+        rgb_im_path = os.path.join(self.scenes[self._count].path, read_pair[3])
         self.current_rgb_image = cv2.resize(cv2.cvtColor(cv2.imread(rgb_im_path), cv2.COLOR_BGR2RGB), (self.width, self.height))
         self.current_dep_image = cv2.resize(cv2.imread(dep_im_path, cv2.IMREAD_ANYDEPTH), (self.width, self.height))
-        #read the corresponding camera pose from the trajectory
         self.current_cam_pos = self.cam_pose_list[read_indx]
-        #and the ply path of the associated scene (required for visualizations)
-        self.current_ply_path = os.path.join(self.dataset_path, self.cur_scene_dir, self.cur_scene_dir + '.ply')
 
         # Get projection of keypoints on current image
-        matched = self.process.get_projection(self.scene_gui_input, self.current_cam_pos)
+        matched = self.process.get_projection(self.labels, self.current_cam_pos)
 
         # Update canvas
         pixmap = QtGui.QPixmap(rgb_im_path)
@@ -146,7 +166,9 @@ class GUI(MainWindow):
         self.display_btn.setEnabled(True)
 
         # Update status bar
-        self.statusBar().showMessage("Loaded image\nfrom scene {}".format(self.cur_scene_dir), 5000)
+        self.statusBar().showMessage(
+            "Loaded image\nfrom scene {}".format(self.scenes[self._count].name), 5000
+        )
 
     def btn_func_prev_scene(self):
         """
@@ -159,36 +181,39 @@ class GUI(MainWindow):
         Function to lock labeled keypoints in current scene
         and move to next scene.
         """
-        while len(self.scene_gui_input) != self.num_keypoints:
+        while len(self.labels) != self.num_keypoints:
             self.btn_func_skip()
 
         #keypoint pixel coords, depth images and camera poses for this scene
-        self.process.list_of_scenes.append(self.scene_gui_input)
+        self.process.list_of_scenes.append(self.labels)
         #and scene ply
         self.scene_ply_paths.append(self.current_ply_path)
 
-        self.scene_gui_input = []
-        try:
-            self.cur_scene_id +=1
-            self.read_current_scene()
-            # Configure state of widgets
-            self.load_btn.setEnabled(True)
-            self.load_slider.setEnabled(True)
-            # Update status bar
-            self.statusBar().showMessage("Moving to scene:\n{}".format(self.cur_scene_dir), 5000)
-            # Update keypoint dock widget
-            self.keypoint_list.clear()
-            # Update scene dock widget
-            item = self.scene_list.item(self.cur_scene_id)
-            item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
-        except KeyError:
+        self.labels = []
+        self._count+=1
+        if self._count < len(self.scenes):
+            # Read current scene
+            success = self.read_current_scene()
+            if success:
+                # Configure state of widgets
+                self.load_btn.setEnabled(True)
+                self.load_slider.setEnabled(True)
+                # Update status bar and dock
+                self.statusBar().showMessage(
+                    "Moving to scene:\n{}".format(self.scenes[self._count].name), 5000
+                )
+                self.update_keypoint_dock()
+                item = self.scene_list.item(self._count)
+                item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
+            else:
+                self.statusBar().showMessage("Scene read failure!")
+        else:
             # Confugre state of wigets
             self.load_btn.setEnabled(False)
             self.load_slider.setEnabled(False)
-            # Update status bar
+            # Update status bar and dock
             self.statusBar().showMessage("Done all scenes.Please quit")
-            # Update keypoint dock widget
-            self.keypoint_list.clear()
+            self.update_keypoint_dock()
 
         # Reset the canvas
         self.canvas.loadPixmap(QtGui.QPixmap())
@@ -225,9 +250,9 @@ class GUI(MainWindow):
         and visualize them in the scene.
         """
         #2D-to-3D conversion
-        keypoint_pos = self.process.convert_2d_to_3d([self.scene_gui_input])
+        keypoint_pos = self.process.convert_2d_to_3d([self.labels])
         #transform points to origins of respective scene
-        self.process.transform_points(keypoint_pos, [self.scene_gui_input])
+        self.process.transform_points(keypoint_pos, [self.labels])
         #visualize the labeled keypoints in scene
         obj = []
         if not self.process.scene_kpts==[]:
