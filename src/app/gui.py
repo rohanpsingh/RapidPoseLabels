@@ -124,13 +124,9 @@ class GUI(MainWindow):
         self.canvas.loadPixmap(pixmap)
         self.canvas.locked_points = [QtCore.QPoint(point[0], point[1]) for point in matched]
         self.canvas.update()
-
         # Configure state of widgets
         self.skip_btn.setEnabled(True)
-        self.reset_btn.setEnabled(True)
-        self.next_scene_btn.setEnabled(True)
         self.display_btn.setEnabled(True)
-
         # Update status bar
         self.statusBar().showMessage(
             "Loaded image\nfrom scene {}".format(self.scenes[self._count].name), 5000
@@ -144,10 +140,8 @@ class GUI(MainWindow):
         success = self.load_scene()
         if not success:
             self.prev_scene_btn.setEnabled(False)
-
         # Configure the state of widgets
         self.next_scene_btn.setEnabled(True)
-        return
 
     def btn_func_next_scene(self):
         """
@@ -163,11 +157,9 @@ class GUI(MainWindow):
         success = self.load_scene()
         if not success:
             self.next_scene_btn.setEnabled(False)
-
         # Configure state of widgets
         self.skip_btn.setEnabled(False)
         self.prev_scene_btn.setEnabled(True)
-        self.compute_btn.setEnabled(True)
         self.display_btn.setEnabled(False)
 
     def btn_func_compute(self):
@@ -285,7 +277,8 @@ class GUI(MainWindow):
         # Add the point, current depth image and current camera pose to scene
         label = Label([point.x(), point.y()], self.current_dep_image, self.current_cam_pos)
         self.scenes[self._count].labels.append(label)
-
+        # Configure state of widgets
+        self.compute_btn.setEnabled(True)
         # Update status bar and dock
         self.statusBar().showMessage("Keypoint added:{}".format((point.x(), point.y()), 5000))
         self.update_keypoint_dock()
