@@ -278,6 +278,7 @@ class GUI(MainWindow):
         label = Label([point.x(), point.y()], self.current_dep_image, self.current_cam_pos)
         self.scenes[self._count].labels.append(label)
         # Configure state of widgets
+        self.reset_btn.setEnabled(True)
         self.compute_btn.setEnabled(True)
         # Update status bar and dock
         self.statusBar().showMessage("Keypoint added:{}".format((point.x(), point.y()), 5000))
