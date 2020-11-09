@@ -18,7 +18,6 @@ class Process:
         scale          - scale parameter of the RGB-D sensor
                          (1000 for Intel RealSense D435)
         """
-        self.scene_cams = []
         self.scene_kpts = []
         self.select_vec = []
         self.scale = scale
