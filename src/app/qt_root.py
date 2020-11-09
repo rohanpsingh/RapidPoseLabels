@@ -20,7 +20,7 @@ class MainWindow(QtWidgets.QMainWindow):
         qtRectangle.moveCenter(centerPoint)
         self.move(qtRectangle.topLeft())
 
-        # Initial layout
+        # Main layout
         self.main_layout()
 
     def btn_func_load(self):
@@ -66,6 +66,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.scale = 1.0
         self.canvas.adjustSize()
 
+    def act_func_load_data(self):
+        pass
+
+    def act_func_load_model(self):
+        pass
+
+    def act_func_info(self):
+        import webbrowser
+        url = "https://github.com/rohanpsingh/rapidposelabels/blob/master/README.md"
+        webbrowser.open(url)
+
+    def act_func_icons(self):
+        QtWidgets.QMessageBox.information(self, "Icons", "Some icons by Yusuke Kamiyamane <p.yusukekamiyamane.com>")
+
     def main_layout(self):
         # Canvas
         self.canvas = QCanvas()
@@ -101,8 +115,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.normal_size_act.triggered.connect(self.act_func_normal_size)
         self.normal_size_act.setEnabled(True)
 
+        # Action
+        self.load_data_act = QtWidgets.QAction("Load &Dataset", shortcut="Ctrl+O")
+        self.load_data_act.setIcon(QtGui.QIcon(ICONS_DIR + "folder-horizontal.png"))
+        self.load_data_act.triggered.connect(self.act_func_load_data)
+        self.load_data_act.setEnabled(True)
+
+        # Action
+        self.load_model_act = QtWidgets.QAction("Load &Model", shortcut="Ctrl+M")
+        self.load_model_act.setIcon(QtGui.QIcon(ICONS_DIR + "document-text.png"))
+        self.load_model_act.triggered.connect(self.act_func_load_model)
+        self.load_model_act.setEnabled(False)
+
+        # Action
+        self.info_act = QtWidgets.QAction("&Info", triggered=self.act_func_info)
+        self.info_act.setIcon(QtGui.QIcon(ICONS_DIR + "information.png"))
+
+        # Action
+        self.icons_act = QtWidgets.QAction("Icons", triggered=self.act_func_icons)
+
         # Button
-        self.load_btn = QtWidgets.QAction('Load', shortcut="Space")
+        self.load_btn = QtWidgets.QAction('Load New Image', shortcut="Space")
         self.load_btn.setIcon(QtGui.QIcon(ICONS_DIR + "image-sunset.png"))
         self.load_btn.triggered.connect(lambda x : self.btn_func_load(-1))
         self.load_btn.setStatusTip("Click here to load a new image from current scene.")
@@ -127,7 +160,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.next_scene_btn.setIcon(QtGui.QIcon(ICONS_DIR + "arrow.png"))
         self.next_scene_btn.triggered.connect(self.btn_func_next_scene)
         self.next_scene_btn.setStatusTip("Click here to confirm labels in current scene and move to next.")
-        self.next_scene_btn.setEnabled(True)
+        self.next_scene_btn.setEnabled(False)
 
         # Button
         self.prev_scene_btn = QtWidgets.QAction('Previous scene', shortcut="Ctrl+P")
@@ -179,59 +212,44 @@ class MainWindow(QtWidgets.QMainWindow):
         right_toolbar.addAction(self.compute_btn)
         right_toolbar.addAction(self.display_btn)
         right_toolbar.addAction(self.quit_btn)
-        right_toolbar.addAction(self.zoom_in_act)
-        right_toolbar.addAction(self.zoom_out_act)
-        right_toolbar.addAction(self.normal_size_act)
         
-        # Menus on the left
+        # Docked widgets on the left
         self.keypoint_list = QtWidgets.QListWidget()
         self.keypoint_dock = QtWidgets.QDockWidget("Keypoint List")
         self.keypoint_dock.setWidget(self.keypoint_list)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.keypoint_dock)
 
         self.scene_list = QtWidgets.QListWidget()
-        #self.scene_list.setEnabled(False)
         self.scene_dock = QtWidgets.QDockWidget("Scenes")
         self.scene_dock.setWidget(self.scene_list)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.scene_dock)
 
-        # Create a status bar
-        self.setStatusBar(QtWidgets.QStatusBar(self))
+        # Menu toolbar on the top
+        self.fileMenu = QtWidgets.QMenu("&File")
+        self.fileMenu.addAction(self.load_data_act)
+        self.fileMenu.addAction(self.load_model_act)
+        self.fileMenu.addAction(self.load_btn)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.quit_btn)
 
-    def init_layout(self):
+        self.viewMenu = QtWidgets.QMenu("&View")
+        self.viewMenu.addAction(self.zoom_in_act)
+        self.viewMenu.addAction(self.zoom_out_act)
+        self.viewMenu.addAction(self.normal_size_act)
 
-        # Button for building a new model
-        button1 = QtWidgets.QPushButton('Create a new model')
-        button1.toggle()
-        button1.clicked.connect(self.btn_func_create)
-        button1.setStatusTip("Click here if you do not have a model for you object.")
-        button1.setFixedSize(300,50)
+        self.helpMenu = QtWidgets.QMenu("&Help")
+        self.helpMenu.addAction(self.info_act)
+        self.helpMenu.addAction(self.icons_act)
 
-        # Button for choosing an existing model file
-        button2 = QtWidgets.QPushButton('Use existing model')
-        button2.toggle()
-        button2.clicked.connect(self.btn_func_choose)
-        button2.setStatusTip("Click here if you already have a *.pp model for your object.")
-        button2.setFixedSize(300,50)
-
-        # Button for defining a grasping point
-        button3 = QtWidgets.QPushButton('Define grasp point')
-        button3.toggle()
-        button3.clicked.connect(self.btn_func_grasping)
-        button3.setStatusTip("Click here to localize a grasp pose for a known object.")
-        button3.setFixedSize(300,50)
-        
-        # Create the layout and place widgets in
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(button1)
-        layout.addWidget(button2)
-        layout.addWidget(button3)
-        widget = QtWidgets.QWidget()
-        widget.setLayout(layout)
-        self.setCentralWidget(widget)
+        self.menuBar().addMenu(self.fileMenu)
+        self.menuBar().addMenu(self.viewMenu)
+        self.menuBar().addMenu(self.helpMenu)
 
         # Create a status bar
         self.setStatusBar(QtWidgets.QStatusBar(self))
+        self.mode_qlabel = QtWidgets.QLabel()
+        self.mode_qlabel.setText("Mode: Create new model")
+        self.statusBar().addPermanentWidget(self.mode_qlabel)
 
     def scroll_request(self, delta, orientation):
         # Scroll bars move with mouse wheel

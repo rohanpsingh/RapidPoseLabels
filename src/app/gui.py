@@ -9,7 +9,7 @@ from app.qt_root import MainWindow
 from app.dataclasses import Label, Scene
 
 class GUI(MainWindow):
-    def __init__(self, window_title, dataset_path, output_dir, num_keypoints, scale=1000, scenes=None):
+    def __init__(self, window_title, output_dir, num_keypoints, scale=1000):
         """
         Constructor for the GUI class.
         Input arguments:
@@ -26,30 +26,67 @@ class GUI(MainWindow):
         self.width = 640
         self.height = 480
 
-        #get input arguments
-        self.dataset_path = dataset_path
+        # Get input arguments
         self.output_dir = output_dir
         self.num_keypoints = num_keypoints
-
-        #get the list of scene directories
-        list_of_scene_dirs = scenes
-        if scenes is None:
-            list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
-        list_of_scene_dirs.sort()
-        print("Number of scenes: ", len(list_of_scene_dirs))
-        print("List of scenes: ", list_of_scene_dirs)
-
-        #set up the Process object
-        self.process = Process(dataset_path, output_dir, scale)
+        self.scale = scale
 
         # Counter for scenes
         self._count = -1
 
+        self.scenes = []
         self.current_rgb_image = []
         self.current_dep_image = []
         self.current_cam_pos  = []
 
-        self.scenes = []
+        # Set mode
+        self.build_model_mode = True
+
+        #run the main loop
+        app = QtWidgets.QApplication([])
+        app.setApplicationName("RapidPoseLabelsApplication")
+        super().__init__(window_title, self.width, self.height)
+        super().show()
+        app.exec_()
+
+    def act_func_load_data(self):
+        """
+        Function to choose the root dataset directory.
+        """
+        # Open QFileDialog
+        dialog = QtWidgets.QFileDialog(caption="Load dataset")
+        dialog.setFileMode(QtWidgets.QFileDialog.Directory)
+        if not dialog.exec_():
+            return
+        self.dataset_path = dialog.selectedFiles()[0]
+
+        # Check if directory contains scenes
+        try:
+            if not 'camera.txt' in os.listdir(self.dataset_path):
+                raise Exception
+            for fn in os.listdir(self.dataset_path):
+                dn = os.path.join(self.dataset_path, fn)
+                if os.path.isdir(dn):
+                    if not ('associations.txt' in os.listdir(dn) or
+                            'camera.poses' in os.listdir(dn) or
+                            'depth' in os.listdir(dn) or
+                            'rgb' in os.listdir(dn)):
+                        raise Exception
+        except:
+            print("Check format of root directory.")
+            return
+
+        # Get the list of scene directories
+        list_of_scene_dirs = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
+        list_of_scene_dirs.sort()
+        print("Number of scenes: ", len(list_of_scene_dirs))
+        print("List of scenes: ", list_of_scene_dirs)
+
+        # Initialize Process object
+        self.process = Process(self.dataset_path, self.output_dir, self.scale)
+
+        # Initialize Scene object
+        self.scenes.clear()
         for idx, item in enumerate(list_of_scene_dirs):
             scene_obj = Scene(idx,
                               item,
@@ -58,12 +95,8 @@ class GUI(MainWindow):
                               [])
             self.scenes.append(scene_obj)
 
-        #run the main loop
-        app = QtWidgets.QApplication([])
-        app.setApplicationName("RapidPoseLabelsApplication")
-        super().__init__(window_title, self.width, self.height)
-
         # List the scenes in dock window
+        self.scene_list.clear()
         for scene in self.scenes:
             item = QtWidgets.QListWidgetItem(
                 "scene {}: {}".format(scene.index, scene.path)
@@ -71,15 +104,32 @@ class GUI(MainWindow):
             item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
             self.scene_list.addItem(item)
 
-        super().show()
-        app.exec_()
+        # Configure state of widgets
+        self.load_model_act.setEnabled(True)
+        self.next_scene_btn.setEnabled(True)
 
-        #GUI mode flags
-        self.build_model_mode  = True
-        self.model_exist_mode  = False
-        self.define_grasp_mode = False
+    def act_func_load_model(self):
+        """
+        Function to load existing sparse, keypoint model.
+        """
+        # Open QFileDialog
+        dialog = QtWidgets.QFileDialog(caption="Load model")
+        dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
+        dialog.setNameFilter("Sparse model files (*.pp *.txt)")
+        if not dialog.exec_():
+            return
+        filename = dialog.selectedFiles()
+        self.process.sparse_model_file = filename
+
+        # Set mode
+        self.build_model_mode = False
+        self.mode_qlabel.setText("Mode: Use existing model")
 
     def btn_func_skip(self):
+        """
+        Function to skip a keypoint.
+        (-1, -1) is added to the list of keypoints.
+        """
         self.new_point(QtCore.QPoint(-1, -1))
 
     def btn_func_reset(self):
@@ -169,17 +219,15 @@ class GUI(MainWindow):
         #2D-to-3D conversion
         scenes_labels = [scene.labels for scene in self.scenes][:self._count]
         keypoint_pos = self.process.convert_2d_to_3d(scenes_labels)
-        #transform points to origins of respective scene
+        # Transform points to origins of respective scene
         self.process.transform_points(keypoint_pos, scenes_labels)
-        #final computation step
-        if True:
+        # Final computation step
+        if self.build_model_mode:
             res, obj = self.process.compute(False)
-            #visualize the generated object model in first scene
+            # Visualize the generated object model in first scene
             self.process.visualize_points_in_scene(self.scenes[0].mesh, obj)
-        elif self.model_exist_mode:
+        else:
             res, obj = self.process.compute(True)
-        elif self.define_grasp_mode:
-            res, obj = self.process.define_grasp_point(self.scenes[0].mesh)
 
     def btn_func_display(self):
         """
@@ -195,47 +243,6 @@ class GUI(MainWindow):
         if not self.process.scene_kpts==[]:
             obj = self.process.scene_kpts[0].transpose()
         self.process.visualize_points_in_scene(self.scenes[self._count].mesh, obj)
-
-    def btn_func_choose(self):
-        #set GUI mode
-        self.build_model_mode  = False
-        self.model_exist_mode  = True
-        self.define_grasp_mode = False
-        if self.num_keypoints<4:
-            raise Exception("Number of keypoints is %d (should be >=4)" % self.num_keypoints)
-        #browse sparse model file
-        file_name = filedialog.askopenfilename(initialdir=".", title="Browse sparse model file",
-                                               filetypes=(("Text files","*.txt"),("all files","*.*")))
-        self.process.sparse_model_file = file_name
-        #display main layout
-        if file_name:
-            self.main_layout()
-
-    def btn_func_create(self):
-        #set GUI mode
-        self.build_model_mode  = True
-        self.model_exist_mode  = False
-        self.define_grasp_mode = False
-        if self.num_keypoints<4:
-            raise Exception("Number of keypoints is %d (should be >=4)" % self.num_keypoints)
-        #display main layout
-        self.main_layout()
-
-    def btn_func_grasping(self):
-        #set GUI mode
-        self.build_model_mode  = False
-        self.model_exist_mode  = False
-        self.define_grasp_mode = True
-        #browse sparse model file
-        file_name = filedialog.askopenfilename(initialdir=".", title="Browse sparse model file",
-                                               filetypes=(("Text files","*.txt"),("all files","*.*")))
-        self.process.sparse_model_file = file_name
-        #display main layout
-        if file_name:
-            self.num_keypoints = 2
-            self.main_layout()
-            self.skip_btn.setEnabled(False)
-            self.next_scene_btn.setEnabled(False)
 
 
     ########### Utility #############
