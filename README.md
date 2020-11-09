@@ -38,12 +38,9 @@ We assume that using [bag-to-png](https://gist.github.com/rohanpsingh/9ac99c46ae
 dataset_dir/
 ├── wrench_tool_data/
 │   ├── 00/
-│	│	├── 00.klg
 │	│	├── 00.ply
 │	│	├── associations.txt
 │	│	├── camera.poses
-│	│	├── depth.txt
-│	│	├── rgb.txt
 │	│	├── rgb/
 │	│	└── depth/
 │   ├── 01/
