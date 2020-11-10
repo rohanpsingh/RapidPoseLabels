@@ -5,7 +5,7 @@
 
 # Automated Data Annotation for 6-DoF Object Pose Estimation
 
-This is a tool for rapid generation of labeled training dataset primarily for the purpose of training keypoint detector networks for full pose estimation of a rigid, non-articulated 3D object in RGB images. The code is based on our paper: *Rapid Pose Label Generation through Sparse Representation of Unknown Objects*, [Rohan P. Singh](https://github.com/rohanpsingh), [Mehdi Benallegue](https://github.com/mehdi-benallegue), Yusuke Yoshiyasu, Fumio Kanehiro. [under-review]
+This is a tool for rapid generation of labeled training dataset primarily for the purpose of training keypoint detector networks for full pose estimation of a rigid, non-articulated 3D object in RGB images. The code is based on our paper: *[Rapid Pose Label Generation through Sparse Representation of Unknown Objects](https://arxiv.org/pdf/2011.03790.pdf)*; [Rohan P. Singh](https://github.com/rohanpsingh), [Mehdi Benallegue](https://github.com/mehdi-benallegue), Yusuke Yoshiyasu, Fumio Kanehiro. [under-review]
 
 
 We provide a GUI to fetch minimal user input. Using the given software, we have been able to generate large, accurately--labeled, training datasets consisting of multiple objects in different scenes (environments with varying background conditions, illuminations, clutter etc.) using just a handheld RGB-D sensor in only a few hours, including the time involved in capturing the raw dataset. And ultimately, used the training dataset for training a bounding-box detector ([YOLOv3](https://github.com/AlexeyAB/darknet)) and a keypoint detector network ([ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer)).
