@@ -145,7 +145,7 @@ class GUI(MainWindow):
 
         # Update status bar and dock
         self.statusBar().showMessage("Cleared all labels in this scene", 5000)
-        self.update_keypoint_dock()
+        super().update_keypoint_dock()
 
     def btn_func_load(self, value):
         """
@@ -248,17 +248,6 @@ class GUI(MainWindow):
     ########### Utility #############
     ########## functions ############
 
-    def update_keypoint_dock(self):
-        self.keypoint_list.clear()
-        try:
-            points = [item.pixel for item in self.scenes[self._count].labels]
-            for index, point in enumerate(points):
-                self.keypoint_list.addItem(
-                    "KP {}: {}".format(index, tuple(point))
-                )
-        except IndexError:
-            return
-
     def read_current_scene(self):
         try:
             if not (0 <= self._count < len(self.scenes)):
@@ -289,7 +278,7 @@ class GUI(MainWindow):
         self.compute_btn.setEnabled(True)
         # Update status bar and dock
         self.statusBar().showMessage("Keypoint added:{}".format((point.x(), point.y()), 5000))
-        self.update_keypoint_dock()
+        super().update_keypoint_dock()
 
     def load_scene(self):
         # Read the current scene
@@ -303,7 +292,7 @@ class GUI(MainWindow):
             self.statusBar().showMessage(
                 "Moving to scene:\n{}".format(self.scenes[self._count].name), 5000
             )
-            self.update_keypoint_dock()
+            super().update_keypoint_dock()
             item = self.scene_list.item(self._count)
             item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
             self.scene_list.setCurrentRow(self._count)
@@ -313,7 +302,7 @@ class GUI(MainWindow):
             self.load_slider.setEnabled(False)
             self.reset_btn.setEnabled(False)
             # Update status bar and dock
-            self.update_keypoint_dock()
+            super().update_keypoint_dock()
             self.scene_list.setCurrentRow(-1)
 
         # Reset the canvs

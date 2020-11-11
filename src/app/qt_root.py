@@ -298,3 +298,14 @@ class MainWindow(QtWidgets.QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def update_keypoint_dock(self):
+        self.keypoint_list.clear()
+        try:
+            points = [item.pixel for item in self.scenes[self._count].labels]
+            for index, point in enumerate(points):
+                self.keypoint_list.addItem(
+                    "KP {}: {}".format(index, tuple(point))
+                )
+        except IndexError:
+            return
