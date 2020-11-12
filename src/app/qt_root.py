@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from app.widgets import QCanvas
 from app.widgets import QToolMenu
+from app.widgets import QKeypointListWidget
 
 ICONS_DIR = "./app/icons/"
 
@@ -214,7 +215,8 @@ class MainWindow(QtWidgets.QMainWindow):
         right_toolbar.addAction(self.quit_btn)
         
         # Docked widgets on the left
-        self.keypoint_list = QtWidgets.QListWidget()
+        self.keypoint_list = QKeypointListWidget()
+        self.keypoint_list.itemClicked.connect(self.keypoint_clicked)
         self.keypoint_dock = QtWidgets.QDockWidget("Keypoint List")
         self.keypoint_dock.setWidget(self.keypoint_list)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.keypoint_dock)
@@ -309,3 +311,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 )
         except IndexError:
             return
+
+    def keypoint_clicked(self, item):
+        self.canvas.select_id = None
+        if item.text() is not "":
+            keypoint_id = int(item.text().split(':')[0].split('KP ')[1])
+            self.canvas.select_id = keypoint_id
+        self.canvas.update()

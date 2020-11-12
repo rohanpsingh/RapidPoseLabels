@@ -12,6 +12,7 @@ class QCanvas(QtWidgets.QWidget):
 
         self.scale = 1.0
         self.last_clicked = None
+        self.select_id = None
         self.current_points = []
         self.locked_points = []
 
@@ -81,6 +82,19 @@ class QCanvas(QtWidgets.QWidget):
         for point in list(self.current_points + self.locked_points):
             if not self.outOfPixmap(point):
                 painter.drawEllipse(point, 6, 6)
+
+        # Highlight selected point
+        if self.select_id is not None:
+            try:
+                point = (self.current_points+self.locked_points)[self.select_id]
+                if not self.outOfPixmap(point):
+                    painter.setBrush(QtGui.QBrush())
+                    painter.setPen(QtGui.QPen(QtGui.QColor(0,255,0), 3, QtCore.Qt.DashLine))
+                    painter.drawEllipse(point, 9, 9)
+                    painter.setPen(QtGui.QPen(QtGui.QColor(255,255,0), 3, QtCore.Qt.DashLine))
+                    painter.drawEllipse(point, 12, 12)
+            except:
+                pass
 
         painter.end()
 
