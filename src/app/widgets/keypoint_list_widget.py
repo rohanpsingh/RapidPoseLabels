@@ -36,8 +36,8 @@ class QKeypointListWidget(QtWidgets.QListView):
         self.setWindowFlags(QtCore.Qt.Window)
         self.setModel(StandardItemModel())
         self.model().setItemPrototype(QKeypointListItem(None))
-        self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
-        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        #self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        #self.setDefaultDropAction(QtCore.Qt.MoveAction)
 
         self.clicked.connect(self.itemClickedEvent)
 
