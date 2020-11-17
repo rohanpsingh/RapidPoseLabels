@@ -1,4 +1,5 @@
-## New PyQt GUI
+## Update: New PyQt GUI !  
+Features- zoom-in/out, go back into scenes, load dataset from GUI, change number of keypoints, keyboard shortcuts...
 
 ---
 
@@ -68,13 +69,14 @@ In the case where the user has no model of any kind for their object, the first 
 
 To create the sparse model, first choose about 6-10 points on the object. Since you need to click on these points in RGB images later, make sure the points are uniquely identifiable. Also make sure the points are well distributed around the object, so a few points are visible if you look at the object from any view. Remember the order and location of the chosen points and launch the GUI, setting the ```--keypoints``` argument equal to the number of chosen keypoints.
 
-1. Click on "Create a new model".
-2. Click on "Load New Image" and manually label all keypoints decided on the object which are visible.
-3. Click on "Skip KeyPt" if keypoint is not visible (**Keypoint labeling is order sensitive**).
-4. To shuffle, click on "Load New Image" again.
-5. Click on "Next Scene" when you have clicked on as many points as you can see.
-6. Repeat Steps 2-5 for each scene.
-7. Click on "Compute".
+1. Go to 'File' and 'Load Dataset'.
+2. Click on 'Next scene' to load the first scene.
+3. Click on 'Load New Image' and manually label all keypoints decided on the object which are visible.
+4. Click on 'Skip keypoint' if keypoint is not visible (**Keypoint labeling is order sensitive**).
+5. To shuffle, click on 'Load New Image' again or press the spacebar.
+6. Click on 'Next scene' when you have clicked on as many points as you can see.
+7. Repeat Steps 2-5 for each scene.
+8. Click on 'Compute'.
 
 If manual label was done maintaining the constraints described in the paper, the optimization step should succeed and produce a ```sparse_model.txt``` and ```saved_meta_data.npz``` in the output directory. The ```saved_meta_data.npz``` archive holds data of relative scene transformations and the manually clicked points with their IDs (important for generating the actual labels using ```generate.py``` and evaluation with respect to ground-truth, if available).
 
@@ -95,12 +97,12 @@ If you already have a model file for your object (generated through CAD, scanner
 Once ```sparse_model.txt``` has been generated for a particular object, it is easy to generate labels for any scene. This requires the user to uniquely localize at least 3 points defined in the sparse model in the scene.
 
 1. Launch the GUI.
-2. Click on "Use existing model".
+2. Go to 'File' and 'Load Dataset'. Then 'Load Model'.
 3. Choose a previously generated ```sparse_model.txt``` (A Meshlab *.pp file can also be used in this step).
-4. Click on "Load New Image".
+4. Click on 'Load New Image'.
 5. Label at least 3 keypoints (that exist in the sparse model file).
-6. Click on "Skip KeyPt" if keypoint is not visible (**Keypoint labeling is order sensitive**).
-7. Click on "Compute".
+6. Click on 'Skip keypoint' if keypoint is not visible (**Keypoint labeling is order sensitive**).
+8. Click on 'Compute'.
 
 "Compute" tries to solve an orthogonal Procrustes problem on the given manual clicks and the input sparse model file. This will generate the  ```saved_meta_data.npz``` again for the scenes for which labeling was done.
 
@@ -110,19 +112,6 @@ Once (1) sparse model file, (2) dense model file and (3) scene transformations (
 $ python generate.py --sparse <path-to-sparse-model> --dense <path-to-dense-model> --meta <path-to-saved-meta-data-npz> --dataset <path-to-dataset-dir> --output <path-to-output-directory> --visualize
 ```
 That is it. This should be enough to generate keypoint labels for stacked-hourglass-training as described in [ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer), mask labels for training a pixel-wise segmentation and bounding-box labels for training a generic object detector. Other types of labels are possible too, please create Issue or Pull request :)
-
-### (Optional) To define a Grasp Point
-The GUI can be used to define a 4x4 affine transformation from the origin of the sparse model to a grasp point, as desirable.
-1. Launch the GUI (no need for ```--keypoint``` argument this time)
-2. Select "Define grasp point"
-3. Browse to the sparse model file.
-4. Load an image from the ```00``` scene, and click on 2 points.
-
-The first clicked point defines the position of grasp point and the second point decides the orientation.
-
-TODO: Currently, this works only if user defines grasp point in the "first scene". This is because the sparse object model is defined with respect to "first viewpoint" in "first scene". Ideally, the user should be able to load any scene's PLY and define the grasp point in an interactive 3D environment.
-
-TODO: Grasp point orientation is sometimes affected by noise in scene point cloud.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
