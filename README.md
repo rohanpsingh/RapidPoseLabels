@@ -1,5 +1,5 @@
-## Update: New PyQt GUI !  
-Features- zoom-in/out, go back into scenes, load dataset from GUI, change number of keypoints, keyboard shortcuts...
+### Update: New PyQt GUI is available.
+(zoom-in/out, go back into scenes, load dataset from GUI, change number of keypoints, keyboard shortcuts, and more...)
 
 ---
 
