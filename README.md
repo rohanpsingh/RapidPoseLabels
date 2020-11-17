@@ -1,6 +1,6 @@
+## New PyQt GUI
 
-
-
+---
 
 
 # Automated Data Annotation for 6-DoF Object Pose Estimation
@@ -20,6 +20,7 @@ Links to other parts:
 ## Dependencies
 
 All or several parts of the given Python 3.7.4 code are dependent on the following:
+- PyQt5
 - OpenCV
 - [open3d](http://www.open3d.org/docs/release/getting_started.html)
 - [transforms3d](https://matthew-brett.github.io/transforms3d)
@@ -56,10 +57,10 @@ where ```camera.poses``` and ```00.ply``` are the camera trajectory and the dens
 ### 2. How to use
 This should bring up the main GUI:
 ```
-$ python main.py --dataset <path-to-dataset-dir> --keypoints <number-of-keypoints-to-be>
+$ python main.py
 ```
 <p align="center">
-<img src="https://user-images.githubusercontent.com/16384313/84734452-d5ed0380-afdb-11ea-88e8-cddb0b01c312.png" alt="GUI" width="80%">
+<img src="./tutorial/docs/img/gui_screenshot.png" alt="GUI" width="80%">
 <p>
 
 #### a. If object model is NOT available
