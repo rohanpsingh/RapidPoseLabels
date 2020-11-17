@@ -9,7 +9,7 @@ from app.qt_root import MainWindow
 from app.dataclasses import Label, Scene
 
 class GUI(MainWindow):
-    def __init__(self, window_title, output_dir, num_keypoints, scale=1000):
+    def __init__(self, window_title, output_dir, num_keypoints=8, scale=1000):
         """
         Constructor for the GUI class.
         Input arguments:
@@ -45,7 +45,7 @@ class GUI(MainWindow):
         #run the main loop
         app = QtWidgets.QApplication([])
         app.setApplicationName("RapidPoseLabelsApplication")
-        super().__init__(window_title, self.width, self.height)
+        super().__init__(window_title, self.num_keypoints)
         super().show()
         app.exec_()
 
@@ -200,7 +200,7 @@ class GUI(MainWindow):
         """
         # Fill the scene with dummy labels
         if 0 <= self._count < len(self.scenes):
-            while len(self.scenes[self._count].labels) != self.num_keypoints:
+            while len(self.scenes[self._count].labels) < self.num_keypoints:
                 self.btn_func_skip()
 
         self._count+=1
@@ -308,3 +308,14 @@ class GUI(MainWindow):
         # Reset the canvs
         self.canvas.loadPixmap(QtGui.QPixmap())
         return success
+
+    def keypoint_count_changed(self, value):
+        old_value = self.num_keypoints
+        self.num_keypoints = value
+        if value==old_value:
+            return
+        elif value < old_value:
+            for count in range(len(self.scenes)):
+                self.scenes[count].labels = self.scenes[count].labels[:self.num_keypoints]
+        else:
+            return

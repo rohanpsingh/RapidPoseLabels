@@ -2,16 +2,16 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from app.widgets import QCanvas
 from app.widgets import QToolMenu
 from app.widgets import QKeypointListWidget
+from app.widgets import QKeypointCount
 
 ICONS_DIR = "./app/icons/"
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, window_title, img_width, img_height):
+    def __init__(self, window_title, keypoint_count=8):
         super(MainWindow, self).__init__()
 
-        self.width = img_width
-        self.height = img_height
+        self.init_num_kpts = keypoint_count
         
         # Set up the MainWindow object at center of screen
         self.setWindowTitle(window_title)
@@ -200,6 +200,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_slider.setStatusTip("Slide to load images from the scene.")
         self.load_slider.setEnabled(False)
 
+        # SpinBox
+        self.keypoint_count = QKeypointCount(self.init_num_kpts)
+        self.keypoint_count.setEnabled(True)
+        self.keypoint_count.numKeypoints.connect(self.keypoint_count_changed)
+        keypoint_count_act = QtWidgets.QWidgetAction(self)
+        keypoint_count_act.setDefaultWidget(self.keypoint_count)
+
         # Toolbar on the right
         right_toolbar = QToolMenu("Tool Menu")
         right_toolbar.setIconSize(QtCore.QSize(32,32))
@@ -212,6 +219,7 @@ class MainWindow(QtWidgets.QMainWindow):
         right_toolbar.addAction(self.prev_scene_btn)
         right_toolbar.addAction(self.compute_btn)
         right_toolbar.addAction(self.display_btn)
+        right_toolbar.addAction(keypoint_count_act)
         right_toolbar.addAction(self.quit_btn)
         
         # Docked widgets on the left
@@ -304,7 +312,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_keypoint_dock(self):
         self.keypoint_list.clear()
         try:
-            points = [item.pixel for item in self.scenes[self._count].labels]
+            points = []
+            if self._count>=0:
+                points = [item.pixel for item in self.scenes[self._count].labels]
             for index, point in enumerate(points):
                 self.keypoint_list.addItem(
                     "KP {}: {}".format(index, tuple(point))

@@ -15,8 +15,9 @@ if __name__ == '__main__':
                     default=datetime,
                     help='path to output dir')
     ap.add_argument("--keypoints",
-                    required=True,
+                    required=False,
                     type=int,
+                    default=8,
                     help='number of keypoints to be defined')
     ap.add_argument("--scale",
                     required=False,
