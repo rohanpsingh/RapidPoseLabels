@@ -13,7 +13,7 @@ class QToolMenu(QtWidgets.QToolBar):
 
     def addAction(self, action):
         if isinstance(action, QtWidgets.QWidgetAction):
-            return super(ToolBar, self).addAction(action)
+            return super().addAction(action)
         btn = QtWidgets.QToolButton()
         btn.setDefaultAction(action)
         btn.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
