@@ -114,5 +114,10 @@ $ python generate.py --sparse <path-to-sparse-model> --dense <path-to-dense-mode
 ```
 That is it. This should be enough to generate keypoint labels for stacked-hourglass-training as described in [ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer), mask labels for training a pixel-wise segmentation and bounding-box labels for training a generic object detector. Other types of labels are possible too, please create Issue or Pull request :)
 
+### 4. Training
+You would probably need to convert the format of the generated labels to suit your requirements.  
+If you would like to train our pose estimator, you can directly use [ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer).  
+If you would like to train Mask-RCNN for instance segmentation, refer to [this script](https://gist.github.com/rohanpsingh/0aa3d35d8e038a9c2491c68894f0b93b) to convert the binary masks to contour-points in JSON format.
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
