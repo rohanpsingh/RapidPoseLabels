@@ -1,3 +1,4 @@
+### Update: Docker image (thanks to @avasalya) is [here](https://hub.docker.com/r/avasalya/rpl)
 ### Update: New PyQt GUI is available.
 (with zoom-in/out, go back into scenes, load dataset from GUI, change number of keypoints, keyboard shortcuts, and more features...)  
 
