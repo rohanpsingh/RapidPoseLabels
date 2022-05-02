@@ -2,7 +2,9 @@
 ### Update: New PyQt GUI is available.
 (with zoom-in/out, go back into scenes, load dataset from GUI, change number of keypoints, keyboard shortcuts, and more features...)  
 
-### Update: Step-by-step [tutorial](https://github.com/rohanpsingh/RapidPoseLabels/blob/master/tutorial/how-to-use-no-model.md) is available.
+---
+## [Click here for step-by-step tutorial.](https://github.com/rohanpsingh/RapidPoseLabels/blob/master/tutorial/how-to-use-no-model.md)
+## [Click here for sample dataset.](https://o365tsukuba-my.sharepoint.com/:u:/g/personal/s1920861_u_tsukuba_ac_jp/EY0pnDY7LBBKi_9PFfOH5hoBRcxrUbPJMB0LCUL674UI-Q?e=GTKGla)
 ---
 
 
