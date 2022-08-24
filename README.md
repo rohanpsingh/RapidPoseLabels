@@ -10,7 +10,12 @@
 
 # Automated Data Annotation for 6-DoF Object Pose Estimation
 
-This is a tool for rapid generation of labeled training dataset primarily for the purpose of training keypoint detector networks for full pose estimation of a rigid, non-articulated 3D object in RGB images. The code is based on our paper: *[Rapid Pose Label Generation through Sparse Representation of Unknown Objects](https://arxiv.org/pdf/2011.03790.pdf)*; [Rohan P. Singh](https://github.com/rohanpsingh), [Mehdi Benallegue](https://github.com/mehdi-benallegue), Yusuke Yoshiyasu, Fumio Kanehiro. [under-review]
+
+Code for the paper:  
+[**Rapid Pose Label Generation through Sparse Representation of Unknown Objects**](https://arxiv.org/pdf/2011.03790.pdf) (ICRA 2021)  
+[Rohan P. Singh](https://rohanpsingh.github.io), [Mehdi Benallegue](https://unit.aist.go.jp/jrl-22022/en/members/member-benalleguem.html), [Yusuke Yoshiyasu](https://unit.aist.go.jp/jrl-22022/en/members/member-yoshiyasu.html), [Fumio Kanehiro](https://unit.aist.go.jp/jrl-22022/en/members/member-kanehiro.html)
+
+This is a tool for rapid generation of labeled training dataset primarily for the purpose of training keypoint detector networks for full pose estimation of a rigid, non-articulated 3D object in RGB images.
 
 
 We provide a GUI to fetch minimal user input. Using the given software, we have been able to generate large, accurately--labeled, training datasets consisting of multiple objects in different scenes (environments with varying background conditions, illuminations, clutter etc.) using just a handheld RGB-D sensor in only a few hours, including the time involved in capturing the raw dataset. And ultimately, used the training dataset for training a bounding-box detector ([YOLOv3](https://github.com/AlexeyAB/darknet)) and a keypoint detector network ([ObjectKeypointTrainer](https://github.com/rohanpsingh/ObjectKeypointTrainer)).
@@ -124,3 +129,16 @@ If you would like to train Mask-RCNN for instance segmentation, refer to [this s
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## Citation
+If you find this work useful in your own research, please consider citing:
+```
+@inproceedings{singh2021rapid,
+  title={Rapid Pose Label Generation through Sparse Representation of Unknown Objects},
+  author={Singh, Rohan P and Benallegue, Mehdi and Yoshiyasu, Yusuke and Kanehiro, Fumio},
+  booktitle={2021 IEEE International Conference on Robotics and Automation (ICRA)},
+  pages={10287--10293},
+  year={2021},
+  organization={IEEE}
+}
+```
